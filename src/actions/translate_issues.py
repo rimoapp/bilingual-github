@@ -1,8 +1,9 @@
+import os
 from github import Github
 from src.utils.translation import translate_text
 
-GITHUB_TOKEN = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
-REPO_NAME = "your_username/your_repository"
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+REPO_NAME = "rimoapp/bilingual-github"  
 
 def translate_issue(issue, target_languages):
     for language in target_languages:
