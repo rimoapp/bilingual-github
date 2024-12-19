@@ -1,22 +1,29 @@
-import openai
-import yaml
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
 
-# Load configuration
-with open("config/config.yml", "r") as file:
-    config = yaml.safe_load(file)
+# Load environment variables
+load_dotenv()
 
-openai.api_key = config["llm"]["api_key"]
+# Set up OpenAI client with API key from environment variables
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def translate_text(text, target_language):
     try:
-        response = openai.ChatCompletion.create(
-            model=config["llm"]["model"],
+        # Send request to OpenAI's chat API for translation
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Adjust model version if needed
             messages=[
                 {"role": "system", "content": f"Translate this text to {target_language}."},
                 {"role": "user", "content": text}
             ]
         )
-        return response['choices'][0]['message']['content']
+        
+        # Extract translation from the response
+        translation = response.choices[0].message.content
+        
+        return translation
+    
     except Exception as e:
         print(f"Error in translation: {e}")
         return None
