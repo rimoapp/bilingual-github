@@ -1,0 +1,9 @@
+source_language: en
+target_languages:
+  - ja
+  - fr
+
+llm:
+  provider: openai
+  model: gpt-4
+  api_key: YOUR_OPENAI_API_KEY
