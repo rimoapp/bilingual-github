@@ -1,15 +1,31 @@
+import sys
 import os
+
+# Dynamically add the 'src' directory to sys.path to ensure it can be found
+script_dir = os.path.dirname(__file__)
+src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
+sys.path.insert(0, src_dir)
+
+from utils.translation import translate_text  
+
 from github import Github
-from src.utils.translation import translate_text
+import os
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-REPO_NAME = "rimoapp/bilingual-github"  
+REPO_NAME = "rimoapp/bilingual-github"
 
 def translate_issue(issue, target_languages):
+    original_body = issue.body
+    translations = []
+
     for language in target_languages:
-        translation = translate_text(issue.body, language)
+        translation = translate_text(original_body, language)
         if translation:
-            issue.create_comment(f"Translation to {language}:\n\n{translation}")
+            translations.append(f"Translation to {language}:\n\n{translation}")
+
+    if translations:
+        updated_body = f"{original_body}\n\n" + "\n\n".join(translations)
+        issue.edit(body=updated_body)
 
 def main():
     g = Github(GITHUB_TOKEN)
