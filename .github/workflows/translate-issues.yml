@@ -2,11 +2,7 @@ name: Translate GitHub Issues
 
 on:
   issues:
-    types: [opened, edited]
-
-permissions:
-  contents: read        
-  issues: write    
+    types: [opened, edited]  
 
 jobs:
   translate:
