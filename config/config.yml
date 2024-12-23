@@ -6,4 +6,4 @@ target_languages:
 llm:
   provider: openai
   model: gpt-4o-mini
-  api_key: YOUR_OPENAI_API_KEY
+  api_key: OPENAI_API_KEY
