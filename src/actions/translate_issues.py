@@ -48,14 +48,20 @@ def translate_issue(issue, target_languages, original_body):
             print(f"Issue #{issue.number} already translated to {language}. Skipping.")
             continue
 
+        print(f"Calling translate_text for {language}...")
         translation = translate_text(new_content, language)
-        print(f"Translation for {language}: {translation}")  # Check if translation is happening
+        
+        # Check if translation was successful
         if translation:
+            print(f"Translation for {language}: {translation}")
             translations.append(f"**Translation to {language}:**\n\n{translation}")
+        else:
+            print(f"Translation failed for {language}.")
 
     if translations:
         # Place translations above the original body
         updated_body = "\n\n".join(translations) + "\n\n" + issue.body
+        print(f"Updating issue #{issue.number} with new body...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} translated successfully.")
 
