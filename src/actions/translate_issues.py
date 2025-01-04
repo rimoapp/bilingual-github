@@ -20,20 +20,18 @@ def is_already_translated(issue, language):
         return True
     return False
 
-def get_new_content(original_body, current_body):
-    """Get the newly added content in the issue body after an edit."""
-    if original_body != current_body:
-        # New content is the difference between original and current body
-        return current_body[len(original_body):]
-    return None
-
 def translate_issue(issue, target_languages, original_body):
     """Translate the issue body to the target languages."""
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return
 
-    new_content = get_new_content(original_body, issue.body)
+    # We check if the issue body has changed, if not, no translation is necessary.
+    if original_body == issue.body:
+        print(f"No changes detected in Issue #{issue.number}. Skipping translation.")
+        return
+
+    new_content = issue.body[len(original_body):]
     if not new_content:
         print(f"No new content in Issue #{issue.number}. Skipping translation.")
         return
