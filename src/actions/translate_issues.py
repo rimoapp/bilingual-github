@@ -1,13 +1,13 @@
 import sys
 import os
 from github import Github
+from utils.translation import translate_text
+import time
 
 # Dynamically add the 'src' directory to sys.path to ensure it can be found
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
 sys.path.insert(0, src_dir)
-
-from utils.translation import translate_text
 
 # GitHub token and repository name
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
@@ -57,7 +57,7 @@ def translate_issue(issue, target_languages, original_body):
             translations.append(f"**Translation to {language}:**\n\n{translation}")
         else:
             print(f"Translation failed for {language}.")
-
+    
     if translations:
         # Place translations above the original body
         updated_body = "\n\n".join(translations) + "\n\n" + issue.body
