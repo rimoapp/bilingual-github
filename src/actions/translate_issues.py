@@ -8,10 +8,10 @@ sys.path.insert(0, src_dir)
 
 from utils.translation import translate_text  
 
-from github import Github
+from github import Github 
 import os
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = "rimoapp/bilingual-github"
 
 def translate_issue(issue, target_languages):
@@ -24,7 +24,7 @@ def translate_issue(issue, target_languages):
             translations.append(f"Translation to {language}:\n\n{translation}")
 
     if translations:
-        updated_body = f"{original_body}\n\n" + "\n\n".join(translations)
+        updated_body = "\n\n".join(translations) + f"\n\n**Original Issue:**\n\n{original_body}"
         issue.edit(body=updated_body)
 
 def main():
