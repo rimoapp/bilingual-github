@@ -26,12 +26,18 @@ def translate_issue(issue, target_languages, original_body):
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return
 
-    # We check if the issue body has changed, if not, no translation is necessary.
+    print(f"Original Body: {original_body}")
+    print(f"Current Body: {issue.body}")
+
+    # Compare original body with current body to detect changes
     if original_body == issue.body:
         print(f"No changes detected in Issue #{issue.number}. Skipping translation.")
         return
 
+    # Get the new content added (after editing)
     new_content = issue.body[len(original_body):]
+    print(f"New Content: {new_content}")
+
     if not new_content:
         print(f"No new content in Issue #{issue.number}. Skipping translation.")
         return
@@ -43,6 +49,7 @@ def translate_issue(issue, target_languages, original_body):
             continue
 
         translation = translate_text(new_content, language)
+        print(f"Translation for {language}: {translation}")  # Check if translation is happening
         if translation:
             translations.append(f"**Translation to {language}:**\n\n{translation}")
 
