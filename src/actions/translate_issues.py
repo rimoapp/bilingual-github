@@ -6,7 +6,7 @@ import time
 # Dynamically add the 'src' directory to sys.path to ensure it can be found
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
-sys.path.insert(0, src_dir)
+sys.path.append(src_dir)  # Append instead of insert
 
 from utils.translation import translate_text
 
