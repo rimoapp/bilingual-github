@@ -14,6 +14,7 @@ from utils.translation import translate_text
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = "rimoapp/bilingual-github"
 TRANSLATED_LABEL = "translated"
+EDIT_TRANSLATED_LABEL = "edit-translated"
 
 def is_translation_present(issue, language):
     """Check if the translation for a specific language already exists in the issue body."""
@@ -21,36 +22,23 @@ def is_translation_present(issue, language):
         return True
     return False
 
-def detect_new_content(issue):
-    """Detect newly added content in the issue body."""
-    # Use a hidden marker to track previously translated content
-    marker = "<!-- TRANSLATION_MARKER -->"
-    if marker in issue.body:
-        # Split the body to find new content added after the marker
-        _, new_content = issue.body.split(marker, 1)
-        return new_content.strip()
-    else:
-        # If no marker, consider the whole body as new content
-        return issue.body.strip()
+def detect_new_content(original_body, current_body):
+    """Detect new or modified content in the issue body."""
+    if not original_body:
+        return current_body  # If there was no original body, the entire current body is new
+    if original_body == current_body:
+        return None  # No changes detected
+    # Return only the part of the current body that's different from the original
+    return current_body[len(original_body):]
 
-def update_marker(issue, new_body):
-    """Update the translation marker in the issue body."""
-    marker = "<!-- TRANSLATION_MARKER -->"
-    if marker not in issue.body:
-        # Append marker if not already present
-        updated_body = new_body + f"\n\n{marker}"
-    else:
-        # Replace old marker with the updated marker
-        updated_body = new_body.split(marker)[0] + f"\n\n{marker}"
-    return updated_body
-
-def translate_issue(issue, target_languages):
+def translate_issue(issue, target_languages, original_body):
     """Translate the issue body to the target languages."""
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return
 
-    new_content = detect_new_content(issue)
+    # Detect new or modified content in the issue body
+    new_content = detect_new_content(original_body, issue.body)
     if not new_content:
         print(f"No new content in Issue #{issue.number}. Skipping translation.")
         return
@@ -77,10 +65,7 @@ def translate_issue(issue, target_languages):
     
     if translations:
         # Place translations above the original body
-        translations_block = "\n\n".join(translations)
-        updated_body = f"{translations_block}\n\n{issue.body}"
-        updated_body = update_marker(issue, updated_body)
-        
+        updated_body = "\n\n".join(translations) + "\n\n" + issue.body
         print(f"Updating issue #{issue.number} with new body...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} translated successfully.")
@@ -107,12 +92,27 @@ def main():
         return
 
     for issue in issues:
-        # Translate the issue and add the translated label if it's not already present
-        print(f"Processing Issue #{issue.number}: {issue.title}")
-        translate_issue(issue, ["ja", "fr"])
+        # Save the original body before translation
+        original_body = issue.body
 
-        # Add the translated label if it doesn't already exist
-        if TRANSLATED_LABEL not in [label.name for label in issue.labels]:
+        # Check if the issue was edited
+        if EDIT_TRANSLATED_LABEL not in [label.name for label in issue.labels]:
+            print(f"Issue #{issue.number} was edited. Processing...")
+            translate_issue(issue, ["ja", "fr"], original_body)
+
+            # Add the edit-translated label if it doesn't already exist
+            try:
+                issue.add_to_labels(EDIT_TRANSLATED_LABEL)
+                print(f"Edit-translated label added to Issue #{issue.number}.")
+            except Exception as e:
+                print(f"Error adding label to Issue #{issue.number}: {e}")
+
+        # If the issue is new and has no translated label
+        elif TRANSLATED_LABEL not in [label.name for label in issue.labels]:
+            print(f"Translating new Issue #{issue.number}: {issue.title}")
+            translate_issue(issue, ["ja", "fr"], original_body)
+
+            # Add the translated label
             try:
                 issue.add_to_labels(TRANSLATED_LABEL)
                 print(f"Translated label added to Issue #{issue.number}.")
