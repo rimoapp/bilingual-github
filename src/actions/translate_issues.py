@@ -14,34 +14,41 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = "rimoapp/bilingual-github"
 TRANSLATED_LABEL = "translated"
 
+def is_translated(issue_body, language):
+    """Check if the issue body already contains a translation for a specific language."""
+    return f"**Translation to {language}:**" in issue_body
+
 def translate_issue(issue, target_languages):
     """Translate the issue body to the target languages."""
     if not issue.body:
         print(f"Issue #{issue.number} has no body. Skipping.")
-        return
+        return False
 
+    # Collect translations for any missing languages
     translations = []
     for language in target_languages:
-        # Skip if translation already exists
-        if f"**Translation to {language}:**" in issue.body:
+        if is_translated(issue.body, language):
             print(f"Issue #{issue.number} already translated to {language}. Skipping.")
             continue
 
-        # Perform translation
         print(f"Translating Issue #{issue.number} to {language}...")
         translation = translate_text(issue.body, language)
         if translation:
-            print(f"Translation to {language} completed.")
+            print(f"Translation to {language}: {translation}")
             translations.append(f"**Translation to {language}:**\n\n{translation}")
         else:
             print(f"Translation to {language} failed.")
 
-    # Update issue with translations
+    # If new translations were generated, update the issue
     if translations:
         updated_body = issue.body + "\n\n" + "\n\n".join(translations)
-        print(f"Updating Issue #{issue.number}...")
+        print(f"Updating Issue #{issue.number} with new translations...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} updated successfully.")
+        return True
+
+    print(f"No new translations needed for Issue #{issue.number}.")
+    return False
 
 def main():
     """Main function to process GitHub issues."""
@@ -53,15 +60,25 @@ def main():
     issues = repo.get_issues(state="open")
 
     for issue in issues:
-        # Skip if the translated label already exists
+        # Check if the issue body has changed since it was last translated
         if TRANSLATED_LABEL in [label.name for label in issue.labels]:
-            print(f"Issue #{issue.number} already has the translated label. Skipping.")
-            continue
+            print(f"Issue #{issue.number} has the translated label. Checking for changes...")
+            last_translation_marker = "**Translation to"
+            if last_translation_marker in issue.body:
+                original_body_end_index = issue.body.find(last_translation_marker)
+                original_body = issue.body[:original_body_end_index].strip()
+                if original_body == issue.body[:original_body_end_index].strip():
+                    print(f"Issue #{issue.number} has no new changes. Skipping.")
+                    continue
 
-        # Translate issue and add the label
-        translate_issue(issue, ["ja", "fr"])
-        issue.add_to_labels(TRANSLATED_LABEL)
-        print(f"Translated label added to Issue #{issue.number}.")
+        # Translate the issue and update the label if needed
+        print(f"Processing Issue #{issue.number}: {issue.title}")
+        translated = translate_issue(issue, ["ja", "fr"])
+
+        # Add the 'translated' label if translations were added
+        if translated and TRANSLATED_LABEL not in [label.name for label in issue.labels]:
+            issue.add_to_labels(TRANSLATED_LABEL)
+            print(f"Translated label added to Issue #{issue.number}.")
 
 if __name__ == "__main__":
     # Debug GitHub token and repo details
