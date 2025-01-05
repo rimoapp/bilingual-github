@@ -1,7 +1,13 @@
 import os
+import sys
 import subprocess
 from difflib import unified_diff
-from utils.translation import translate_text  
+
+script_dir = os.path.dirname(__file__)
+src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
+sys.path.insert(0, src_dir)
+
+from utils.translation import translate_text
 
 TARGET_LANGUAGES = ["ja", "fr"]
 
