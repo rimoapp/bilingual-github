@@ -10,36 +10,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Check out the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      # Step 2: Set up Python environment
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
+      # Step 3: Install dependencies
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Step 4: Debug environment (optional, remove if not needed)
+      - name: Debug Environment
+        run: |
+          echo "Python Version:"
+          python --version
+          echo "Current Working Directory:"
+          pwd
+          echo "Listing Repository Files:"
+          ls -R
+
+      # Step 5: Translate Markdown files
       - name: Translate Markdown Files
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python src/hooks/post_commit.py
 
-          - name: Commit and Push Translated Files
-          run: |
-            git config --global user.name "GitHub Actions"
-            git config --global user.email "actions@github.com"
-            git add **/*.md
-            if git diff --cached --quiet; then
-              echo "No changes to commit"
-            else
-              git commit -m "Add translated markdown files"
-              git push
-            fi
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+      # Step 6: Commit and push the translated files
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Commit Translated Files
+        run: |
+          git add .
+          git commit -m "Add translated markdown files" || echo "No changes to commit"
+          git push
