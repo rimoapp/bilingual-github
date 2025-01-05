@@ -21,36 +21,27 @@ def is_already_translated(issue, language):
         return True
     return False
 
-def translate_issue(issue, target_languages, original_body):
+def translate_issue(issue, target_languages):
     """Translate the issue body to the target languages."""
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return
 
-    print(f"Original Body: {original_body}")
-    print(f"Current Body: {issue.body}")
+    # Check if the issue already has translations for all target languages
+    untranslated_languages = [
+        language for language in target_languages
+        if not is_already_translated(issue, language)
+    ]
 
-    # Compare original body with current body to detect changes
-    if original_body == issue.body:
-        print(f"No changes detected in Issue #{issue.number}. Skipping translation.")
+    if not untranslated_languages:
+        print(f"Issue #{issue.number} is already fully translated. Skipping.")
         return
 
-    # Get the new content added (after editing)
-    new_content = issue.body[len(original_body):]
-    print(f"New Content: {new_content}")
-
-    if not new_content:
-        print(f"No new content in Issue #{issue.number}. Skipping translation.")
-        return
-
+    # Translate the issue to all remaining languages
     translations = []
-    for language in target_languages:
-        if is_already_translated(issue, language):
-            print(f"Issue #{issue.number} already translated to {language}. Skipping.")
-            continue
-
+    for language in untranslated_languages:
         print(f"Calling translate_text for {language}...")
-        translation = translate_text(new_content, language)
+        translation = translate_text(issue.body, language)
         
         # Check if translation was successful
         if translation:
@@ -60,8 +51,8 @@ def translate_issue(issue, target_languages, original_body):
             print(f"Translation failed for {language}.")
     
     if translations:
-        # Place translations above the original body
-        updated_body = "\n\n".join(translations) + "\n\n" + issue.body
+        # Append translations below the original body
+        updated_body = issue.body + "\n\n" + "\n\n".join(translations)
         print(f"Updating issue #{issue.number} with new body...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} translated successfully.")
@@ -81,11 +72,9 @@ def main():
             print(f"Issue #{issue.number} is already translated. Skipping.")
             continue
 
-        # Save the original body before translation
-        original_body = issue.body
         # Translate the issue and add the translated label
         print(f"Translating Issue #{issue.number}: {issue.title}")
-        translate_issue(issue, ["ja", "fr"], original_body)
+        translate_issue(issue, ["ja", "fr"])
 
         # Add the translated label
         issue.add_to_labels(TRANSLATED_LABEL)
