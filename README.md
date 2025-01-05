@@ -1,4 +1,4 @@
-﻿# Bilingual-GitHub
+﻿# Bilingual-GitHub |
 Bilingual-GitHub is a Python-based tool designed to automatically translate GitHub issues into multiple languages. This tool integrates with GitHub’s API and leverages translation models to add translated content to issues.
 
 ## Features
