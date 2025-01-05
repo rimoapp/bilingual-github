@@ -22,9 +22,9 @@ def extract_translation_marker(issue_body):
         return issue_body.split(TRANSLATION_MARKER)[-1].strip()
     return ""
 
-def update_translation_marker(issue, updated_content):
+def update_translation_marker(issue, last_translated_content):
     """Add or update the translation marker in the issue body."""
-    marker_section = f"{TRANSLATION_MARKER}\n{updated_content}"
+    marker_section = f"{TRANSLATION_MARKER}\n{last_translated_content}"
     if TRANSLATION_MARKER in issue.body:
         # Update existing marker
         updated_body = issue.body.split(TRANSLATION_MARKER)[0].strip() + "\n\n" + marker_section
@@ -39,9 +39,12 @@ def translate_issue(issue, target_languages):
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return
 
-    # Extract last translated content
+    # Extract last translated content marker
     last_marker = extract_translation_marker(issue.body)
-    new_content = issue.body.replace(last_marker, "").strip()
+
+    # Detect new or modified content
+    new_content = issue.body.split(TRANSLATION_MARKER)[0].strip() if TRANSLATION_MARKER in issue.body else issue.body
+    new_content = new_content.replace(last_marker, "").strip()
 
     if not new_content:
         print(f"No new content in Issue #{issue.number}. Skipping translation.")
@@ -49,26 +52,25 @@ def translate_issue(issue, target_languages):
 
     translations = []
     for language in target_languages:
-        print(f"Calling translate_text for {language}...")
+        print(f"Translating Issue #{issue.number} to {language}...")
         try:
             translation = translate_text(new_content, language)
         except Exception as e:
             print(f"Error during translation for {language}: {e}")
-            translation = None
+            continue
 
         if translation:
-            print(f"Translation for {language}: {translation}")
             translations.append(f"**Translation to {language}:**\n\n{translation}")
+            print(f"Translation for {language}: {translation}")
         else:
             print(f"Translation failed for {language}.")
 
     if translations:
-        # Place translations above the original body
+        # Add translations above the issue body
         updated_body = "\n\n".join(translations) + "\n\n" + issue.body
-        print(f"Updating issue #{issue.number} with new body...")
         issue.edit(body=updated_body)
-        print(f"Issue #{issue.number} translated successfully.")
-        update_translation_marker(issue, issue.body)
+        print(f"Issue #{issue.number} updated with translations.")
+        update_translation_marker(issue, new_content)
 
 def main():
     """Main function to process and translate GitHub issues."""
@@ -92,10 +94,14 @@ def main():
         return
 
     for issue in issues:
-        print(f"Processing Issue #{issue.number}: {issue.title}")
-        translate_issue(issue, ["ja", "fr"])
+        # Skip already translated issues unless they are edited
+        if TRANSLATED_LABEL in [label.name for label in issue.labels]:
+            print(f"Issue #{issue.number} already translated. Checking for edits...")
+        else:
+            print(f"Processing new Issue #{issue.number}: {issue.title}")
 
-        # Add the translated label if it doesn't already exist
+        # Translate and add the "translated" label if necessary
+        translate_issue(issue, ["ja", "fr"])
         if TRANSLATED_LABEL not in [label.name for label in issue.labels]:
             try:
                 issue.add_to_labels(TRANSLATED_LABEL)
