@@ -92,30 +92,30 @@ def main():
         return
 
     for issue in issues:
-        # Save the original body before translation
-        original_body = issue.body
+        # Fetch the labels on the issue
+        labels = [label.name for label in issue.labels]
 
-        # Check if the issue was edited
-        if EDIT_TRANSLATED_LABEL not in [label.name for label in issue.labels]:
-            print(f"Issue #{issue.number} was edited. Processing...")
-            translate_issue(issue, ["ja", "fr"], original_body)
-
-            # Add the edit-translated label if it doesn't already exist
-            try:
-                issue.add_to_labels(EDIT_TRANSLATED_LABEL)
-                print(f"Edit-translated label added to Issue #{issue.number}.")
-            except Exception as e:
-                print(f"Error adding label to Issue #{issue.number}: {e}")
-
-        # If the issue is new and has no translated label
-        elif TRANSLATED_LABEL not in [label.name for label in issue.labels]:
+        # If the issue has no translation or edit label, treat it as a new issue
+        if TRANSLATED_LABEL not in labels and EDIT_TRANSLATED_LABEL not in labels:
             print(f"Translating new Issue #{issue.number}: {issue.title}")
-            translate_issue(issue, ["ja", "fr"], original_body)
+            translate_issue(issue, ["ja", "fr"], issue.body)
 
             # Add the translated label
             try:
                 issue.add_to_labels(TRANSLATED_LABEL)
                 print(f"Translated label added to Issue #{issue.number}.")
+            except Exception as e:
+                print(f"Error adding label to Issue #{issue.number}: {e}")
+
+        # Check if the issue has been edited
+        elif issue.updated_at > issue.created_at and EDIT_TRANSLATED_LABEL not in labels:
+            print(f"Issue #{issue.number} was edited. Translating edits...")
+            translate_issue(issue, ["ja", "fr"], issue.body)
+
+            # Add the edit-translated label
+            try:
+                issue.add_to_labels(EDIT_TRANSLATED_LABEL)
+                print(f"Edit-translated label added to Issue #{issue.number}.")
             except Exception as e:
                 print(f"Error adding label to Issue #{issue.number}: {e}")
 
