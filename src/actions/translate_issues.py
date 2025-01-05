@@ -22,26 +22,11 @@ def is_translation_present(issue, language):
         return True
     return False
 
-def detect_new_content(original_body, current_body):
-    """Detect new or modified content in the issue body."""
-    if not original_body:
-        return current_body  # If there was no original body, the entire current body is new
-    if original_body == current_body:
-        return None  # No changes detected
-    # Return only the part of the current body that's different from the original
-    return current_body[len(original_body):]
-
-def translate_issue(issue, target_languages, original_body):
+def translate_issue(issue, target_languages):
     """Translate the issue body to the target languages."""
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
-        return
-
-    # Detect new or modified content in the issue body
-    new_content = detect_new_content(original_body, issue.body)
-    if not new_content:
-        print(f"No new content in Issue #{issue.number}. Skipping translation.")
-        return
+        return False  # Return False if no translation was performed
 
     translations = []
     for language in target_languages:
@@ -51,7 +36,7 @@ def translate_issue(issue, target_languages, original_body):
 
         print(f"Calling translate_text for {language}...")
         try:
-            translation = translate_text(new_content, language)
+            translation = translate_text(issue.body, language)
         except Exception as e:
             print(f"Error during translation for {language}: {e}")
             translation = None
@@ -69,6 +54,9 @@ def translate_issue(issue, target_languages, original_body):
         print(f"Updating issue #{issue.number} with new body...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} translated successfully.")
+        return True  # Return True if translation was performed
+    else:
+        return False  # Return False if no translation was performed
 
 def main():
     """Main function to process and translate GitHub issues."""
@@ -95,29 +83,31 @@ def main():
         # Fetch the labels on the issue
         labels = [label.name for label in issue.labels]
 
-        # If the issue has no translation or edit label, treat it as a new issue
+        # If the issue has no translation label, treat it as a new issue
         if TRANSLATED_LABEL not in labels and EDIT_TRANSLATED_LABEL not in labels:
             print(f"Translating new Issue #{issue.number}: {issue.title}")
-            translate_issue(issue, ["ja", "fr"], issue.body)
+            translated = translate_issue(issue, ["ja", "fr"])
 
-            # Add the translated label
-            try:
-                issue.add_to_labels(TRANSLATED_LABEL)
-                print(f"Translated label added to Issue #{issue.number}.")
-            except Exception as e:
-                print(f"Error adding label to Issue #{issue.number}: {e}")
+            # Add the translated label only if translation was successful
+            if translated:
+                try:
+                    issue.add_to_labels(TRANSLATED_LABEL)
+                    print(f"Translated label added to Issue #{issue.number}.")
+                except Exception as e:
+                    print(f"Error adding label to Issue #{issue.number}: {e}")
 
         # Check if the issue has been edited
         elif issue.updated_at > issue.created_at and EDIT_TRANSLATED_LABEL not in labels:
             print(f"Issue #{issue.number} was edited. Translating edits...")
-            translate_issue(issue, ["ja", "fr"], issue.body)
+            translated = translate_issue(issue, ["ja", "fr"])
 
-            # Add the edit-translated label
-            try:
-                issue.add_to_labels(EDIT_TRANSLATED_LABEL)
-                print(f"Edit-translated label added to Issue #{issue.number}.")
-            except Exception as e:
-                print(f"Error adding label to Issue #{issue.number}: {e}")
+            # Add the edit-translated label only if translation was successful
+            if translated:
+                try:
+                    issue.add_to_labels(EDIT_TRANSLATED_LABEL)
+                    print(f"Edit-translated label added to Issue #{issue.number}.")
+                except Exception as e:
+                    print(f"Error adding label to Issue #{issue.number}: {e}")
 
 if __name__ == "__main__":
     main()
