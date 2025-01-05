@@ -3,7 +3,6 @@ import sys
 import subprocess
 from difflib import unified_diff
 
-# Add src directory to sys.path for module imports
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
 sys.path.insert(0, src_dir)
@@ -27,14 +26,16 @@ def read_file(file_path):
 def save_translated_file(file_path, content, language):
     """Save the translated content to a new file."""
     translated_file = f"{file_path.split('.')[0]}.{language}.md"
+    print(f"Saving translated file: {translated_file}")
     with open(translated_file, "w", encoding="utf-8") as file:
         file.write(content)
-    print(f"Translated file saved: {translated_file}")
 
 def get_changed_files():
     """Get a list of files changed in the last commit."""
     result = subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"], capture_output=True, text=True)
-    return [f.strip() for f in result.stdout.split("\n") if f.strip()]
+    changed_files = [f.strip() for f in result.stdout.split("\n") if f.strip()]
+    print(f"Changed files: {changed_files}")
+    return changed_files
 
 def is_original_markdown(file_path):
     """Check if a file is an original markdown file (not a translation)."""
@@ -43,7 +44,6 @@ def is_original_markdown(file_path):
 def sync_translations(original_file, target_languages):
     """Translate and synchronize markdown files."""
     content = read_file(original_file)
-    
     for language in target_languages:
         translated_file = f"{original_file.split('.')[0]}.{language}.md"
 
@@ -51,15 +51,17 @@ def sync_translations(original_file, target_languages):
             # Read existing translation
             existing_translation = read_file(translated_file)
 
-            # Always retranslate the file for simplicity
-            print(f"Updating translation for {original_file} to {language}...")
-            translated_content = translate_text(content, language)
+            # Check differences and re-translate changed parts
+            diff = unified_diff(existing_translation.splitlines(), content.splitlines(), lineterm="")
+            diff_lines = list(diff)
 
-            # Save the updated translation
-            save_translated_file(original_file, translated_content, language)
+            if diff_lines:
+                print(f"Changes detected in {original_file}. Updating {translated_file}...")
+                translated_content = translate_text(content, language)
+                save_translated_file(original_file, translated_content, language)
         else:
             # Translate the whole file if translation doesn't exist
-            print(f"Creating new translation for {original_file} to {language}...")
+            print(f"Translating {original_file} to {language}...")
             translated_content = translate_text(content, language)
             save_translated_file(original_file, translated_content, language)
 
