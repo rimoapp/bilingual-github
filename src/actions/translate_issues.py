@@ -66,11 +66,11 @@ def translate_issue(issue, target_languages):
             print(f"Translation failed for {language}.")
 
     if translations:
-        # Add translations above the issue body
-        updated_body = "\n\n".join(translations) + "\n\n" + issue.body
+        # Add translations above the original body without duplicating the original content
+        existing_content = issue.body.split(TRANSLATION_MARKER)[0].strip() if TRANSLATION_MARKER in issue.body else issue.body
+        updated_body = "\n\n".join(translations) + "\n\n" + existing_content + f"\n\n{TRANSLATION_MARKER}\n{new_content}"
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} updated with translations.")
-        update_translation_marker(issue, new_content)
 
 def main():
     """Main function to process and translate GitHub issues."""
