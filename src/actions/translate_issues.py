@@ -48,8 +48,12 @@ def translate_issue(issue, target_languages, original_body):
             continue
 
         print(f"Calling translate_text for {language}...")
-        translation = translate_text(new_content, language)
-        
+        try:
+            translation = translate_text(new_content, language)
+        except Exception as e:
+            print(f"Error during translation for {language}: {e}")
+            translation = None
+
         # Check if translation was successful
         if translation:
             print(f"Translation for {language}: {translation}")
@@ -67,24 +71,39 @@ def translate_issue(issue, target_languages, original_body):
 def main():
     """Main function to process and translate GitHub issues."""
     # Initialize GitHub client
+    if not GITHUB_TOKEN:
+        print("Error: GITHUB_TOKEN is not set.")
+        return
     g = Github(GITHUB_TOKEN)
-    repo = g.get_repo(REPO_NAME)
+
+    try:
+        repo = g.get_repo(REPO_NAME)
+    except Exception as e:
+        print(f"Error accessing repository {REPO_NAME}: {e}")
+        return
 
     # Fetch all open issues
-    issues = repo.get_issues(state="open")
+    try:
+        issues = repo.get_issues(state="open")
+    except Exception as e:
+        print(f"Error fetching issues from {REPO_NAME}: {e}")
+        return
 
     for issue in issues:
         # Save the original body before translation
         original_body = issue.body
 
         # Translate the issue and add the translated label if it's not already present
-        print(f"Translating Issue #{issue.number}: {issue.title}")
+        print(f"Processing Issue #{issue.number}: {issue.title}")
         translate_issue(issue, ["ja", "fr"], original_body)
 
         # Add the translated label if it doesn't already exist
         if TRANSLATED_LABEL not in [label.name for label in issue.labels]:
-            issue.add_to_labels(TRANSLATED_LABEL)
-            print(f"Translated label added to Issue #{issue.number}.")
+            try:
+                issue.add_to_labels(TRANSLATED_LABEL)
+                print(f"Translated label added to Issue #{issue.number}.")
+            except Exception as e:
+                print(f"Error adding label to Issue #{issue.number}: {e}")
 
 if __name__ == "__main__":
     main()
