@@ -15,11 +15,23 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = "rimoapp/bilingual-github"
 TRANSLATED_LABEL = "translated"
 
-def is_translation_present(issue, language):
-    """Check if the translation for a specific language already exists in the issue body."""
-    if issue.body and f"**Translation to {language}:**" in issue.body:
-        return True
-    return False
+def get_existing_translations(issue_body):
+    """Extract already present translations from the issue body."""
+    translations = {}
+    lines = issue_body.split("\n")
+    current_language = None
+    for line in lines:
+        if line.startswith("**Translation to"):
+            current_language = line.split("**Translation to ")[1].split(":**")[0]
+        elif current_language and line.strip():  # Capture translation body
+            translations[current_language] = translations.get(current_language, "") + line.strip() + "\n"
+    return translations
+
+def detect_new_content(issue_body, existing_translations):
+    """Identify new content to translate by removing already translated sections."""
+    for translation in existing_translations.values():
+        issue_body = issue_body.replace(translation.strip(), "")
+    return issue_body.strip()
 
 def translate_issue(issue, target_languages):
     """Translate the issue body to the target languages."""
@@ -27,15 +39,21 @@ def translate_issue(issue, target_languages):
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return
 
+    existing_translations = get_existing_translations(issue.body)
+    new_content = detect_new_content(issue.body, existing_translations)
+    if not new_content:
+        print(f"No new content in Issue #{issue.number}. Skipping translation.")
+        return
+
     translations = []
     for language in target_languages:
-        if is_translation_present(issue, language):
+        if language in existing_translations:
             print(f"Issue #{issue.number} already translated to {language}. Skipping.")
             continue
 
         print(f"Calling translate_text for {language}...")
         try:
-            translation = translate_text(issue.body, language)  # Translate the entire body for new issues
+            translation = translate_text(new_content, language)
         except Exception as e:
             print(f"Error during translation for {language}: {e}")
             translation = None
