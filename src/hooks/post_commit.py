@@ -32,10 +32,16 @@ def save_translated_file(file_path, content, language):
 
 def get_changed_files():
     """Get a list of files changed in the last commit."""
-    result = subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"], capture_output=True, text=True)
+    print("Fetching changed files...")
+    result = subprocess.run(
+        ["git", "diff", "--name-only", "HEAD~1", "HEAD"], 
+        capture_output=True, 
+        text=True
+    )
     changed_files = [f.strip() for f in result.stdout.split("\n") if f.strip()]
-    print(f"Changed files: {changed_files}")
+    print(f"Changed files detected: {changed_files}")
     return changed_files
+
 
 def is_original_markdown(file_path):
     """Check if a file is an original markdown file (not a translation)."""

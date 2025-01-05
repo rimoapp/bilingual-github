@@ -10,40 +10,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch full Git history
 
-      # Step 2: Set up Python environment
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # Step 3: Install dependencies
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 4: Debug environment (optional, remove if not needed)
-      - name: Debug Environment
+      - name: Debug Git State
         run: |
-          echo "Python Version:"
-          python --version
-          echo "Current Working Directory:"
-          pwd
-          echo "Listing Repository Files:"
-          ls -R
+          echo "Current Git State:"
+          git log --oneline -5
+          echo "Changed Files:"
+          git diff --name-only HEAD~1 HEAD
 
-      # Step 5: Translate Markdown files
       - name: Translate Markdown Files
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python src/hooks/post_commit.py
 
-      # Step 6: Commit and push the translated files
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
