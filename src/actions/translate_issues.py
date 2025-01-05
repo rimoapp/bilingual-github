@@ -21,24 +21,10 @@ def is_translation_present(issue, language):
         return True
     return False
 
-def detect_new_content(original_body, current_body):
-    """Detect new or modified content in the issue body."""
-    if not original_body:
-        return current_body  # If there was no original body, the entire current body is new
-    if original_body == current_body:
-        return None  # No changes detected
-    # Return only the part of the current body that's different from the original
-    return current_body[len(original_body):]
-
-def translate_issue(issue, target_languages, original_body):
+def translate_issue(issue, target_languages):
     """Translate the issue body to the target languages."""
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
-        return
-
-    new_content = detect_new_content(original_body, issue.body)
-    if not new_content:
-        print(f"No new content in Issue #{issue.number}. Skipping translation.")
         return
 
     translations = []
@@ -49,7 +35,7 @@ def translate_issue(issue, target_languages, original_body):
 
         print(f"Calling translate_text for {language}...")
         try:
-            translation = translate_text(new_content, language)
+            translation = translate_text(issue.body, language)  # Translate the entire body for new issues
         except Exception as e:
             print(f"Error during translation for {language}: {e}")
             translation = None
@@ -90,12 +76,9 @@ def main():
         return
 
     for issue in issues:
-        # Save the original body before translation
-        original_body = issue.body
-
         # Translate the issue and add the translated label if it's not already present
         print(f"Processing Issue #{issue.number}: {issue.title}")
-        translate_issue(issue, ["ja", "fr"], original_body)
+        translate_issue(issue, ["ja", "fr"])
 
         # Add the translated label if it doesn't already exist
         if TRANSLATED_LABEL not in [label.name for label in issue.labels]:
