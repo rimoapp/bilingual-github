@@ -1,7 +1,6 @@
 import sys
 import os
 from github import Github
-import time
 
 # Dynamically add the 'src' directory to sys.path to ensure it can be found
 script_dir = os.path.dirname(__file__)
@@ -16,21 +15,21 @@ REPO_NAME = "rimoapp/bilingual-github"
 TRANSLATED_LABEL = "translated"
 TRANSLATION_MARKER = "<!-- TRANSLATION_MARKER -->"
 
-def extract_translation_marker(issue_body):
-    """Extract the marker for tracking the last translated content."""
+def extract_original_body(issue_body):
+    """Extract the original issue body (before translations and markers)."""
+    if TRANSLATION_MARKER in issue_body:
+        return issue_body.split(TRANSLATION_MARKER)[0].strip()
+    return issue_body.strip()
+
+def extract_last_translated_content(issue_body):
+    """Extract the content after the translation marker."""
     if TRANSLATION_MARKER in issue_body:
         return issue_body.split(TRANSLATION_MARKER)[-1].strip()
     return ""
 
-def update_translation_marker(issue, last_translated_content):
-    """Add or update the translation marker in the issue body."""
-    marker_section = f"{TRANSLATION_MARKER}\n{last_translated_content}"
-    if TRANSLATION_MARKER in issue.body:
-        # Update existing marker
-        updated_body = issue.body.split(TRANSLATION_MARKER)[0].strip() + "\n\n" + marker_section
-    else:
-        # Add a new marker
-        updated_body = issue.body.strip() + "\n\n" + marker_section
+def update_translation_marker(issue, original_body, translated_section):
+    """Update the issue body with translations and the marker."""
+    updated_body = f"{translated_section}\n\n{original_body}\n\n{TRANSLATION_MARKER}\n{original_body}"
     issue.edit(body=updated_body)
 
 def translate_issue(issue, target_languages):
@@ -39,13 +38,12 @@ def translate_issue(issue, target_languages):
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return
 
-    # Extract last translated content marker
-    last_marker = extract_translation_marker(issue.body)
+    # Extract original content and last translated content
+    original_body = extract_original_body(issue.body)
+    last_translated_content = extract_last_translated_content(issue.body)
 
     # Detect new or modified content
-    new_content = issue.body.split(TRANSLATION_MARKER)[0].strip() if TRANSLATION_MARKER in issue.body else issue.body
-    new_content = new_content.replace(last_marker, "").strip()
-
+    new_content = original_body.replace(last_translated_content, "").strip()
     if not new_content:
         print(f"No new content in Issue #{issue.number}. Skipping translation.")
         return
@@ -66,10 +64,9 @@ def translate_issue(issue, target_languages):
             print(f"Translation failed for {language}.")
 
     if translations:
-        # Add translations above the original body without duplicating the original content
-        existing_content = issue.body.split(TRANSLATION_MARKER)[0].strip() if TRANSLATION_MARKER in issue.body else issue.body
-        updated_body = "\n\n".join(translations) + "\n\n" + existing_content + f"\n\n{TRANSLATION_MARKER}\n{new_content}"
-        issue.edit(body=updated_body)
+        # Add translations above the original body and update marker
+        translated_section = "\n\n".join(translations)
+        update_translation_marker(issue, original_body, translated_section)
         print(f"Issue #{issue.number} updated with translations.")
 
 def main():
