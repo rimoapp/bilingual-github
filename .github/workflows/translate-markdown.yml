@@ -29,12 +29,17 @@ jobs:
         run: |
           python src/hooks/post_commit.py
 
-      - name: Commit and Push Translated Files
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add .
-          git commit -m "Add translated markdown files"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          - name: Commit and Push Translated Files
+          run: |
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add **/*.md
+            if git diff --cached --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "Add translated markdown files"
+              git push
+            fi
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        

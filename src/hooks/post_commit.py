@@ -3,6 +3,7 @@ import sys
 import subprocess
 from difflib import unified_diff
 
+# Add src directory to sys.path for module imports
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
 sys.path.insert(0, src_dir)
@@ -28,6 +29,7 @@ def save_translated_file(file_path, content, language):
     translated_file = f"{file_path.split('.')[0]}.{language}.md"
     with open(translated_file, "w", encoding="utf-8") as file:
         file.write(content)
+    print(f"Translated file saved: {translated_file}")
 
 def get_changed_files():
     """Get a list of files changed in the last commit."""
@@ -49,17 +51,15 @@ def sync_translations(original_file, target_languages):
             # Read existing translation
             existing_translation = read_file(translated_file)
 
-            # Check differences and re-translate changed parts
-            diff = unified_diff(existing_translation.splitlines(), content.splitlines(), lineterm="")
-            diff_lines = list(diff)
+            # Always retranslate the file for simplicity
+            print(f"Updating translation for {original_file} to {language}...")
+            translated_content = translate_text(content, language)
 
-            if diff_lines:
-                print(f"Changes detected in {original_file}. Updating {translated_file}...")
-                translated_content = translate_text(content, language)
-                save_translated_file(original_file, translated_content, language)
+            # Save the updated translation
+            save_translated_file(original_file, translated_content, language)
         else:
             # Translate the whole file if translation doesn't exist
-            print(f"Translating {original_file} to {language}...")
+            print(f"Creating new translation for {original_file} to {language}...")
             translated_content = translate_text(content, language)
             save_translated_file(original_file, translated_content, language)
 
