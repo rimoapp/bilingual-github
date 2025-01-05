@@ -1,7 +1,6 @@
 import sys
 import os
 from github import Github
-import time
 
 # Dynamically add the 'src' directory to sys.path to ensure it can be found
 script_dir = os.path.dirname(__file__)
@@ -17,55 +16,67 @@ TRANSLATED_LABEL = "translated"
 EDIT_TRANSLATED_LABEL = "edit-translated"
 
 def translate_edited_issue(issue, target_languages):
-    """Translate only the newly added content in an edited issue."""
+    """Translate only newly added/edited content in an issue."""
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return False  # No translation was performed
 
-    # Check if the issue has already been translated
-    translations = []
-    original_translations = []
-
-    # Split the body to separate original and translated parts
-    if "**Translation to" in issue.body:
-        split_body = issue.body.split("**Translation to")
-        original_body = split_body[-1].strip()  # Assume the last part is the original text
-        original_translations = split_body[:-1]  # Everything before is considered translated parts
+    # Check if the issue has been updated
+    if issue.updated_at > issue.created_at:
+        print(f"Issue #{issue.number} has been updated. Processing edits...")
     else:
-        original_body = issue.body
+        print(f"Issue #{issue.number} has not been updated since creation. Skipping.")
+        return False  # No updates detected
 
-    # Identify the new part of the issue body that was edited
-    new_content = original_body  # For simplicity, we consider the whole body edited (can be optimized)
+    # Extract original and translated content
+    body_lines = issue.body.split("\n")
+    original_content = []
+    existing_translations = []
 
-    # Translate the new content
+    # Separate original content and translations
+    in_translation_section = False
+    for line in body_lines:
+        if "**Translation to" in line:
+            in_translation_section = True
+        if in_translation_section:
+            existing_translations.append(line)
+        else:
+            original_content.append(line)
+
+    original_body = "\n".join(original_content).strip()
+    translated_languages = [line.split(":")[1].strip() for line in existing_translations if line.startswith("**Translation to")]
+
+    # Translate the newly added/edited content
+    new_content = original_body.strip()
+    if not new_content:
+        print(f"No content to translate for Issue #{issue.number}. Skipping.")
+        return False
+
+    translations = []
     for language in target_languages:
-        if is_translation_present(issue, language):
+        if language in translated_languages:
             print(f"Issue #{issue.number} already translated to {language}. Skipping.")
             continue
 
-        print(f"Translating new content for {language}...")
+        print(f"Translating updated content to {language}...")
         try:
             translation = translate_text(new_content, language)
-        except Exception as e:
-            print(f"Error during translation for {language}: {e}")
-            translation = None
-
-        # Check if translation was successful
-        if translation:
-            print(f"New translation for {language}: {translation}")
             translations.append(f"**Translation to {language}:**\n\n{translation}")
-        else:
-            print(f"Translation failed for {language}.")
+        except Exception as e:
+            print(f"Error translating to {language}: {e}")
 
     if translations:
-        # Combine new translations with original translations and the issue body
-        updated_body = "\n\n".join(original_translations + translations) + "\n\n" + original_body
-        print(f"Updating issue #{issue.number} with new translations...")
+        # Append translations to the issue body
+        updated_body = original_body + "\n\n" + "\n\n".join(translations)
         issue.edit(body=updated_body)
-        print(f"New translations added to Issue #{issue.number}.")
-        return True  # Return True if new translations were added
+        print(f"Updated Issue #{issue.number} with translations.")
+        return True
     else:
-        return False  # Return False if no new translations were added
+        print(f"No translations added for Issue #{issue.number}.")
+        return False
+
+
+
 
 
 def is_translation_present(issue, language):
