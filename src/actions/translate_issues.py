@@ -14,6 +14,22 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = "rimoapp/bilingual-github"
 TRANSLATED_LABEL = "translated"
 
+def extract_original_body(issue_body):
+    """Extract the original untranslated content from the issue body."""
+    if not issue_body:
+        return ""
+    
+    # Locate the start of translations in the issue body
+    translation_marker = "**Translation to"
+    marker_index = issue_body.find(translation_marker)
+    
+    # If no translation marker exists, the entire body is original
+    if marker_index == -1:
+        return issue_body.strip()
+    
+    # Extract the original body (before translations)
+    return issue_body[:marker_index].strip()
+
 def is_translated(issue_body, language):
     """Check if the issue body already contains a translation for a specific language."""
     return f"**Translation to {language}:**" in issue_body
@@ -24,6 +40,12 @@ def translate_issue(issue, target_languages):
         print(f"Issue #{issue.number} has no body. Skipping.")
         return False
 
+    # Extract the original untranslated content
+    original_body = extract_original_body(issue.body)
+    if not original_body:
+        print(f"Issue #{issue.number} has no original content to translate. Skipping.")
+        return False
+
     # Collect translations for any missing languages
     translations = []
     for language in target_languages:
@@ -32,7 +54,7 @@ def translate_issue(issue, target_languages):
             continue
 
         print(f"Translating Issue #{issue.number} to {language}...")
-        translation = translate_text(issue.body, language)
+        translation = translate_text(original_body, language)
         if translation:
             print(f"Translation to {language}: {translation}")
             translations.append(f"**Translation to {language}:**\n\n{translation}")
@@ -63,11 +85,13 @@ def main():
         # Check if the issue body has changed since it was last translated
         if TRANSLATED_LABEL in [label.name for label in issue.labels]:
             print(f"Issue #{issue.number} has the translated label. Checking for changes...")
+            current_original_body = extract_original_body(issue.body)
             last_translation_marker = "**Translation to"
-            if last_translation_marker in issue.body:
-                original_body_end_index = issue.body.find(last_translation_marker)
-                original_body = issue.body[:original_body_end_index].strip()
-                if original_body == issue.body[:original_body_end_index].strip():
+            marker_index = issue.body.find(last_translation_marker)
+
+            if marker_index != -1:
+                previously_translated_body = issue.body[:marker_index].strip()
+                if current_original_body == previously_translated_body:
                     print(f"Issue #{issue.number} has no new changes. Skipping.")
                     continue
 
