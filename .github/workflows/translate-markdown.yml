@@ -1,9 +1,11 @@
 name: Translate Markdown Files
 
 on:
-  push:
-    paths:
-      - '**/*.md'
+  workflow_call: # Makes this workflow reusable
+    inputs:
+      OPENAI_API_KEY:
+        required: true
+        type: string
 
 jobs:
   translate-markdown:
@@ -34,7 +36,7 @@ jobs:
 
       - name: Translate Markdown Files
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
         run: |
           python src/hooks/post_commit.py
 
