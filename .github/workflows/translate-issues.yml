@@ -28,8 +28,8 @@ jobs:
 
       - name: Debug Secrets
         run: |
-          echo "GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
-          echo "OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}"
+          echo "GITHUB_TOKEN: ***"
+          echo "OPENAI_API_KEY: ***"  # Avoid exposing secrets in plain text logs
 
       - name: Translate Issues
         run: python src/actions/translate_issues.py
