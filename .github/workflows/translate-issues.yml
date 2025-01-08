@@ -3,8 +3,6 @@ name: Translate GitHub Issues
 on:
   workflow_call:
     secrets:
-      GITHUB_TOKEN:
-        required: true
       OPENAI_API_KEY:
         required: true
 
