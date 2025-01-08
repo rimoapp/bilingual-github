@@ -1,7 +1,7 @@
 name: Translate GitHub Issues
 
 on:
-  workflow_call: # Makes this workflow reusable
+  workflow_call:
     inputs:
       GITHUB_TOKEN:
         required: true
@@ -28,8 +28,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Debugging Step to Check Inputs
+      - name: Debug Inputs
+        run: |
+          echo "GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}"
+          echo "OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}"
+
       - name: Translate Issues
         run: python src/actions/translate_issues.py
         env:
           GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ inputs.OPENAI_API_KEY }}
+
