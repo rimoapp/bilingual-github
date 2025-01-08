@@ -14,6 +14,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      # Debugging step to list files
+      - name: List files for debugging
+        run: |
+          ls -la  # This will list all files and directories to check the location of requirements.txt
+
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
