@@ -8,7 +8,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def translate_text(text, target_language):
     try:
-        response = client.chat.completions.create(
+        response = client.chat_completions.create(
             model="gpt-3.5-turbo", 
             messages=[
                 {"role": "system", "content": f"Translate this text to {target_language}."},
@@ -16,8 +16,7 @@ def translate_text(text, target_language):
             ]
         )
         
-        translation = response.choices[0].message['content']
-        
+        translation = response['choices'][0]['message']['content']        
         return translation
     
     except Exception as e:
