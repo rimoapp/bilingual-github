@@ -13,8 +13,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      # Debugging step to verify files and directories
       - name: Debug - List files and directories
         run: |
           echo "Current Directory: $(pwd)"
@@ -28,7 +29,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt  # Adjust path if necessary
 
       - name: Debug Secrets
         run: |
