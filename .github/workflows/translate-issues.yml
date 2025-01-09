@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout bilingual-github Repository
         uses: actions/checkout@v3
+        with:
+          repository: rimoapp/bilingual-github  
 
-      # Debugging step to list files
-      - name: List files for debugging
-        run: |
-          ls -la  # This will list all files and directories to check the location of requirements.txt
+      - name: List Files for Debugging
+        run: ls -la  
 
       - name: Set Up Python
         uses: actions/setup-python@v4
