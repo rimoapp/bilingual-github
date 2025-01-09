@@ -11,7 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: "Debug - List files in the repository" # Quoted to avoid parsing issues
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Debugging step to verify files and directories
+      - name: Debug - List files and directories
         run: |
           echo "Current Directory: $(pwd)"
           ls -la
