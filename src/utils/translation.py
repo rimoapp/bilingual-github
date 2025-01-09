@@ -1,22 +1,23 @@
+import openai  # Correct library
 import os
-from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")  # Set the API key correctly
 
 def translate_text(text, target_language):
     try:
-        response = client.chat.completions.create(
-            model="gpt-4",  
+        # Correct method call
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Specify the model
             messages=[
                 {"role": "system", "content": f"Translate this text to {target_language}."},
                 {"role": "user", "content": text}
             ]
         )
         
-        translation = response.choices[0].message.content
+        translation = response['choices'][0]['message']['content']  # Parse response correctly
         
         return translation
     
