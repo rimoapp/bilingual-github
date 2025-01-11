@@ -5,7 +5,7 @@ import requests
 load_dotenv()
 
 # Ensure the API key is correctly set
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").stripe()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set. Please ensure it is defined in the environment.")
 
