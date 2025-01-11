@@ -10,7 +10,7 @@ def translate_text(text, target_language):
     try:
         # Correct method call
         response = openai.ChatCompletion.create(
-            model="gpt-4",  # Specify the model
+            model="gpt-4o-mini",  # Specify the model
             messages=[
                 {"role": "system", "content": f"Translate this text to {target_language}."},
                 {"role": "user", "content": text}
