@@ -5,7 +5,7 @@ import requests
 load_dotenv()
 
 # Ensure the API key is correctly set
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").stripe()
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set. Please ensure it is defined in the environment.")
 
@@ -25,9 +25,10 @@ def translate_text(text, target_language):
 
         # Define the headers
         headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
+           "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '').strip()}"
         }
+        if "Bearer" not in headers["Authorization"]:
+            print("Error: Authorization header is malformed.")
 
         # Make the request to OpenAI
         response = requests.post(url, json=payload, headers=headers)

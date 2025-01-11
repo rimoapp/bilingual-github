@@ -31,18 +31,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Debug Secrets
+      - name: Debug API Key
         run: |
-          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
-            echo "ERROR: OPENAI_API_KEY is not set"
+          echo "OPENAI_API_KEY is ${OPENAI_API_KEY}" # Do not print the value
+          if [ -z "${OPENAI_API_KEY}" ]; then
+            echo "OPENAI_API_KEY is not set or empty."
             exit 1
           else
-            echo "OPENAI_API_KEY is set"
-          fi        
-
-      - name: Check Environment Variables
-        run: |
-          echo "OPENAI_API_KEY is ${{ secrets.OPENAI_API_KEY }}"
+            echo "OPENAI_API_KEY is set."
+          fi
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        
             
 
       - name: Translate Issues
