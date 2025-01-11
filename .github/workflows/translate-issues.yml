@@ -38,25 +38,7 @@ jobs:
             exit 1
           else
             echo "OPENAI_API_KEY is set"
-          fi
-
-      - name: Test OpenAI API Connectivity
-        run: |
-          for i in {1..3}; do
-            response=$(curl -X POST https://api.openai.com/v1/chat/completions \
-            -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello"}]}' \
-            --http1.1 -v -i)
-            echo "$response"
-            # Check if response contains any error
-            if [[ "$response" == *"error"* ]]; then
-              echo "Error occurred during API call"
-              exit 1
-            fi
-            break
-          done
-        
+          fi        
 
       - name: Translate Issues
         run: python src/actions/translate_issues.py
