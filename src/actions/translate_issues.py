@@ -66,6 +66,7 @@ def translate_edited_issue(issue, target_languages):
 
     if translations:
         updated_body = issue.body + "\n\n" + "\n\n".join(translations)
+        print(f"Attempting to update Issue #{issue.number} with body:\n{updated_body}")
         issue.edit(body=updated_body)
         print(f"Updated Issue #{issue.number} with translations.")
         return True

@@ -9,6 +9,8 @@ on:
 jobs:
   translate:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write    
 
     steps:
       - name: Checkout bilingual-github Repository
@@ -51,5 +53,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-permissions:
-  issues: write          
+      
