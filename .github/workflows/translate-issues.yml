@@ -8,7 +8,7 @@ on:
     inputs:
       issue_number:
         required: true
-        type: string  # Issue number as a string, as GitHub Actions passes inputs as strings.
+        type: string # Issue number as a string, as GitHub Actions passes inputs as strings.
 
 jobs:
   translate:
