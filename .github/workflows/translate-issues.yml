@@ -38,17 +38,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Debug API Key
-        run: |
-          echo "OPENAI_API_KEY is ${OPENAI_API_KEY}" # Do not print the value
-          if [ -z "${OPENAI_API_KEY}" ]; then
-            echo "OPENAI_API_KEY is not set or empty."
-            exit 1
-          else:
-            echo "OPENAI_API_KEY is set."
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
       - name: Translate Issues
         run: python src/actions/translate_issues.py
         env:
