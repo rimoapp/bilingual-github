@@ -1,7 +1,13 @@
 import sys
 import os
 from github import Github
-from src.utils.translation import translate_text
+
+# Dynamically add the 'src' directory to sys.path to ensure it can be found
+script_dir = os.path.dirname(__file__)
+src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
+sys.path.append(src_dir)
+
+from utils.translation import translate_text
 
 # GitHub token and repository name
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
