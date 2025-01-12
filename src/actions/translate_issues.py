@@ -9,9 +9,9 @@ sys.path.append(src_dir)
 
 from utils.translation import translate_text
 
-# GitHub token and repository name
+# GitHub token and repository name (dynamic detection for target repo)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
-REPO_NAME = "rimoapp/bilingual-github"
+REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()  # Detect the calling repo dynamically
 TRANSLATED_LABEL = "translated"
 EDIT_TRANSLATED_LABEL = "edit-translated"
 
@@ -122,6 +122,10 @@ def main():
     if not GITHUB_TOKEN:
         print("Error: GITHUB_TOKEN is not set.")
         return
+    if not REPO_NAME:
+        print("Error: GITHUB_REPOSITORY is not set.")
+        return
+
     g = Github(GITHUB_TOKEN)
 
     try:
