@@ -15,6 +15,9 @@ REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()  # Detect the calling rep
 TRANSLATED_LABEL = "translated"
 EDIT_TRANSLATED_LABEL = "edit-translated"
 
+# Get issue number from the environment variable (passed dynamically)
+ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
+
 def translate_edited_issue(issue, target_languages):
     """Translate only newly added/edited content in an issue."""
     if not issue.body:
@@ -125,6 +128,16 @@ def main():
     if not REPO_NAME:
         print("Error: GITHUB_REPOSITORY is not set.")
         return
+    if not ISSUE_NUMBER:
+        print("Error: ISSUE_NUMBER is not set.")
+        return
+
+    # Convert ISSUE_NUMBER to integer
+    try:
+        issue_number = int(ISSUE_NUMBER)  # Convert string to integer
+    except ValueError:
+        print(f"Error: Invalid issue number '{ISSUE_NUMBER}'")
+        return
 
     g = Github(GITHUB_TOKEN)
 
@@ -134,43 +147,23 @@ def main():
         print(f"Error accessing repository {REPO_NAME}: {e}")
         return
 
-    # Fetch all open issues
+    # Fetch the specific issue
     try:
-        issues = repo.get_issues(state="open")
+        issue = repo.get_issue(number=issue_number)
     except Exception as e:
-        print(f"Error fetching issues from {REPO_NAME}: {e}")
+        print(f"Error fetching Issue #{issue_number} from {REPO_NAME}: {e}")
         return
 
-    for issue in issues:
-        # Fetch the labels on the issue
-        labels = [label.name for label in issue.labels]
+    # Translate the issue
+    translated = translate_issue(issue, ["ja", "fr"])
 
-        # If the issue has no translation label, treat it as a new issue
-        if TRANSLATED_LABEL not in labels and EDIT_TRANSLATED_LABEL not in labels:
-            print(f"Translating new Issue #{issue.number}: {issue.title}")
-            translated = translate_issue(issue, ["ja", "fr"])
-
-            # Add the translated label only if translation was successful
-            if translated:
-                try:
-                    issue.add_to_labels(TRANSLATED_LABEL)
-                    print(f"Translated label added to Issue #{issue.number}.")
-                except Exception as e:
-                    print(f"Error adding label to Issue #{issue.number}: {e}")
-
-        # Check if the issue has been edited
-        elif issue.updated_at > issue.created_at and EDIT_TRANSLATED_LABEL not in labels:
-            print(f"Issue #{issue.number} was edited. Translating newly added content...")
-            translated = translate_edited_issue(issue, ["ja", "fr"])
-
-            # Add the edit-translated label only if translation was successful
-            if translated:
-                try:
-                    issue.add_to_labels(EDIT_TRANSLATED_LABEL)
-                    print(f"Edit-translated label added to Issue #{issue.number}.")
-                except Exception as e:
-                    print(f"Error adding label to Issue #{issue.number}: {e}")
-
+    # Add the translated label only if translation was successful
+    if translated:
+        try:
+            issue.add_to_labels(TRANSLATED_LABEL)
+            print(f"Translated label added to Issue #{issue.number}.")
+        except Exception as e:
+            print(f"Error adding label to Issue #{issue.number}: {e}")
 
 if __name__ == "__main__":
     main()
