@@ -20,8 +20,8 @@ jobs:
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
-          repository: rimoapp/bilingual-testing  # Corrected repository name
-          token: ${{ secrets.GITHUB_TOKEN }}    # Correct token for the target repository
+          repository: rimoapp/bilingual-github  # Corrected repository name
+            # Correct token for the target repository
 
       - name: Debug - List files and directories
         run: |
