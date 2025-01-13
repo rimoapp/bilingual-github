@@ -11,45 +11,34 @@ from utils.translation import translate_text
 
 # GitHub token and repository name (dynamic detection for target repo)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
-REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()  # Detect the calling repo dynamically
+REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
 TRANSLATED_LABEL = "translated"
 
-# Get issue number from the environment variable (passed dynamically)
+# Get issue number from the environment variable
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 
-
-def extract_original_content(issue_body, target_languages):
+def get_original_content(issue_body):
     """
-    Extract only the original content from the issue body by removing any existing translations.
+    Extract only the original content from the issue body by removing all translations.
+    Returns the content that appears before any translation markers.
     """
-    lines = issue_body.splitlines()
-    original_content = []
-    in_translation_section = False
-
-    for line in lines:
-        # Detect start of a translation section
-        if any(f"**Translation to {lang}:" in line for lang in target_languages):
-            in_translation_section = True
-        # Detect end of a translation section (empty line after translations)
-        elif in_translation_section and line.strip() == "":
-            in_translation_section = False
-        # Collect lines that are not part of a translation section
-        elif not in_translation_section:
-            original_content.append(line)
-
-    return "\n".join(original_content).strip()
-
+    # Split on first occurrence of "Translation to" (case insensitive)
+    parts = issue_body.lower().split("**translation to", 1)
+    if len(parts) > 1:
+        # Return the original content, using the original case from issue_body
+        return issue_body[:len(parts[0])].strip()
+    return issue_body.strip()
 
 def translate_issue(issue, target_languages):
     """
-    Translate the issue body to the target languages, replacing old translations with updated ones.
+    Translate the issue body to the target languages, replacing any existing translations.
     """
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
-        return False  # Return False if no translation was performed
+        return False
 
-    # Extract the original content from the issue body
-    original_content = extract_original_content(issue.body, target_languages)
+    # Get only the original content, removing all existing translations
+    original_content = get_original_content(issue.body)
     if not original_content:
         print(f"Could not identify original content for Issue #{issue.number}. Skipping.")
         return False
@@ -65,8 +54,8 @@ def translate_issue(issue, target_languages):
             print(f"Error translating to {language}: {e}")
 
     if translations:
-        # Combine original content with the new translations
-        updated_body =  "\n\n".join(translations)
+        # Combine original content with the new translations, separated by newlines
+        updated_body = f"{original_content}\n\n" + "\n\n".join(translations)
         print(f"Updating issue #{issue.number} with new translations...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} updated successfully.")
@@ -74,7 +63,6 @@ def translate_issue(issue, target_languages):
     else:
         print(f"No translations were added for Issue #{issue.number}.")
         return False
-
 
 def main():
     """Main function to process and translate GitHub issues."""
@@ -121,7 +109,6 @@ def main():
             print(f"Translated label added to Issue #{issue.number}.")
         except Exception as e:
             print(f"Error adding label to Issue #{issue.number}: {e}")
-
 
 if __name__ == "__main__":
     main()
