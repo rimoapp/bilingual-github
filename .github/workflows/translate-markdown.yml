@@ -2,16 +2,16 @@ name: Translate Markdown Files
 
 on:
   workflow_call:
-    secrets:
-      OPENAI_API_KEY:
-        required: true
-      PAT:
-        required: true
     inputs:
       target_repo:
         required: true
         type: string
         description: "The repository to translate (format: owner/repo)"
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      PAT:
+        required: true
 
 jobs:
   translate-markdown:
