@@ -15,7 +15,7 @@ from utils.translation import translate_text
 TARGET_LANGUAGES = ["ja", "fr"]
 
 # Get target repository directory from environment variables
-TARGET_REPO_DIR = os.getenv("TGITHUB_REPOSITORY", "").strip()
+TARGET_REPO_DIR = os.getenv("GITHUB_REPOSITORY", "").strip()
 
 if not TARGET_REPO_DIR or not os.path.isdir(TARGET_REPO_DIR):
     raise ValueError("Target repository directory is not set or doesn't exist")
