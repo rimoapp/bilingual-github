@@ -74,6 +74,7 @@ def translate_issue(issue, target_languages):
 
     # Extract new or modified content
     new_content = extract_new_content(original_content, existing_translations)
+    print(new_content)
     if not new_content:
         print(f"No new content to translate for Issue #{issue.number}. Skipping.")
         return False
