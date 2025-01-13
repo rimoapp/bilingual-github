@@ -26,12 +26,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Debug Git State
-        run: |
-          echo "Current Git State:"
-          git log --oneline -5
-          echo "Changed Files:"
-          git diff --name-only HEAD~1 HEAD
+      # - name: Debug Git State
+      #   run: |
+      #     echo "Current Git State:"
+      #     git log --oneline -5
+      #     echo "Changed Files:"
+      #     git diff --name-only HEAD~1 HEAD
 
       - name: Translate Markdown Files
         run: python src/hooks/post_commit.py
