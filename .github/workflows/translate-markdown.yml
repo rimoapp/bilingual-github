@@ -5,6 +5,8 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: true
+      PAT:
+        required: true
 
 jobs:
   translate-markdown:
@@ -16,7 +18,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          repository: rimoapp/bilingual-github  
+          fetch-depth: 2
+          token: ${{ secrets.PAT }}
 
       - name: Set Up Python
         uses: actions/setup-python@v4
