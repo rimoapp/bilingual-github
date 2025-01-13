@@ -14,6 +14,10 @@ from utils.translation import translate_text
 # Define target languages for translation
 TARGET_LANGUAGES = ["ja", "fr"]
 
+# Get environment variables for target repository
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
+TARGET_REPO_DIR = os.getenv("GITHUB_REPOSITORY", "").strip()  # Directory for target repo
+
 def read_file(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -25,7 +29,9 @@ def read_file(file_path):
 def save_translated_file(file_path, content, language):
     translated_file = Path(file_path).with_suffix(f'.{language}.md')
     translated_file.write_text(content, encoding='utf-8')
-    print(f"Generated translated file: {translated_file}")
+    # Stage the translated file
+    subprocess.run(["git", "add", str(translated_file)], cwd=TARGET_REPO_DIR)
+    print(f"Staged file: {translated_file}")
 
 def get_changed_files():
     try:
@@ -34,6 +40,7 @@ def get_changed_files():
             ["git", "diff", "--name-only", "--cached"],
             capture_output=True,
             text=True,
+            cwd=TARGET_REPO_DIR,
             check=True
         )
         staged_files = [f for f in result.stdout.splitlines() if f.strip()]
@@ -43,6 +50,7 @@ def get_changed_files():
             ["git", "ls-files", "--others", "--exclude-standard"],
             capture_output=True,
             text=True,
+            cwd=TARGET_REPO_DIR,
             check=True
         )
         untracked_files = [f for f in result.stdout.splitlines() if f.strip()]
@@ -81,7 +89,7 @@ def sync_translations(original_file, target_languages):
                 translated_content = translate_text(content, language)
                 if translated_content:
                     save_translated_file(original_file, translated_content, language)
-                    print(f"Updated translation for {translated_file}")
+                    print(f"Updated translation and staged {translated_file}")
             else:
                 print(f"No changes detected for {translated_file}. Skipping.")
 
@@ -89,11 +97,31 @@ def sync_translations(original_file, target_languages):
         print(f"Error processing {original_file}: {str(e)}")
 
 def main():
-    # Get changed files in the repository
+    if not TARGET_REPO_DIR or not os.path.exists(TARGET_REPO_DIR):
+        print("Error: Target repository directory is not set or doesn't exist.")
+        return
+
+    # Pull the latest changes in the target repository
+    try:
+        subprocess.run(["git", "pull"], cwd=TARGET_REPO_DIR, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error pulling latest changes: {str(e)}")
+        return
+
+    # Get changed files in the target repository
     changed_files = get_changed_files()
     for file in changed_files:
-        if os.path.exists(file) and is_original_markdown(file):
-            sync_translations(file, TARGET_LANGUAGES)
+        file_path = os.path.join(TARGET_REPO_DIR, file)
+        if os.path.exists(file_path) and is_original_markdown(file_path):
+            sync_translations(file_path, TARGET_LANGUAGES)
+
+    # Commit and push the changes if there are any
+    try:
+        subprocess.run(["git", "commit", "-m", "Update translations for Markdown files"], cwd=TARGET_REPO_DIR, check=True)
+        subprocess.run(["git", "push"], cwd=TARGET_REPO_DIR, check=True)
+        print("Committed and pushed translation updates.")
+    except subprocess.CalledProcessError as e:
+        print(f"No changes to commit or error committing changes: {str(e)}")
 
 if __name__ == "__main__":
     main()
