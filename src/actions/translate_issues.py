@@ -18,42 +18,26 @@ TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 
 
-def separate_original_content(issue_body, target_languages):
+def extract_original_content(issue_body, target_languages):
     """
-    Extract only the original content from the issue body, excluding any translations.
+    Extract only the original content from the issue body by removing any existing translations.
     """
     lines = issue_body.splitlines()
     original_content = []
     in_translation_section = False
 
     for line in lines:
+        # Detect start of a translation section
         if any(f"**Translation to {lang}:" in line for lang in target_languages):
             in_translation_section = True
-        elif line.strip() == "" and in_translation_section:
+        # Detect end of a translation section (empty line after translations)
+        elif in_translation_section and line.strip() == "":
             in_translation_section = False
+        # Collect lines that are not part of a translation section
         elif not in_translation_section:
             original_content.append(line)
 
     return "\n".join(original_content).strip()
-
-
-def remove_existing_translations(issue_body, target_languages):
-    """
-    Remove existing translations for all target languages from the issue body.
-    """
-    lines = issue_body.splitlines()
-    updated_body = []
-    in_translation_section = False
-
-    for line in lines:
-        if any(f"**Translation to {lang}:" in line for lang in target_languages):
-            in_translation_section = True
-        elif line.strip() == "" and in_translation_section:
-            in_translation_section = False
-        elif not in_translation_section:
-            updated_body.append(line)
-
-    return "\n".join(updated_body).strip()
 
 
 def translate_issue(issue, target_languages):
@@ -64,14 +48,11 @@ def translate_issue(issue, target_languages):
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return False  # Return False if no translation was performed
 
-    # Separate original content and remove existing translations
-    original_content = separate_original_content(issue.body, target_languages)
+    # Extract the original content from the issue body
+    original_content = extract_original_content(issue.body, target_languages)
     if not original_content:
         print(f"Could not identify original content for Issue #{issue.number}. Skipping.")
         return False
-
-    # Remove existing translations from the body
-    issue_body_without_translations = remove_existing_translations(issue.body, target_languages)
 
     # Translate the original content into target languages
     translations = []
@@ -84,8 +65,8 @@ def translate_issue(issue, target_languages):
             print(f"Error translating to {language}: {e}")
 
     if translations:
-        # Append new translations to the issue body
-        updated_body = issue_body_without_translations + "\n\n" + "\n\n".join(translations)
+        # Combine original content with the new translations
+        updated_body = original_content + "\n\n" + "\n\n".join(translations)
         print(f"Updating issue #{issue.number} with new translations...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} updated successfully.")
