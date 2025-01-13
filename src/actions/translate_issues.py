@@ -17,21 +17,46 @@ TRANSLATED_LABEL = "translated"
 # Get issue number from the environment variable
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 
+# Define constants for content markers
+ORIGINAL_MARKER = "**Original Content:**"
+TRANSLATION_MARKER = "**Translation to"
+
 def get_original_content(issue_body):
     """
-    Extract only the original content from the issue body by removing all translations.
-    Returns the content that appears before any translation markers.
+    Extract original content from the issue body, handling both orientations
+    (translations before or after original content).
     """
-    # Split on first occurrence of "Translation to" (case insensitive)
-    parts = issue_body.lower().split("**translation to", 1)
-    if len(parts) > 1:
-        # Return the original content, using the original case from issue_body
-        return issue_body[:len(parts[0])].strip()
-    return issue_body.strip()
+    # Check if we have an explicit Original Content marker
+    if ORIGINAL_MARKER in issue_body:
+        parts = issue_body.split(ORIGINAL_MARKER)
+        return parts[1].strip()
+
+    # Split all content by translation markers
+    parts = issue_body.split(TRANSLATION_MARKER)
+    
+    # If no translations exist yet, return the whole body
+    if len(parts) == 1:
+        return issue_body.strip()
+        
+    # Check the position of translations
+    translations_at_top = issue_body.lower().startswith(TRANSLATION_MARKER.lower())
+    
+    if translations_at_top:
+        # If translations are at the top, original content is after the last translation
+        # Find the end of the last translation section
+        sections = issue_body.split("\n\n")
+        for i, section in enumerate(sections):
+            if not section.lower().startswith(TRANSLATION_MARKER.lower()):
+                # Found the start of original content
+                return "\n\n".join(sections[i:]).strip()
+        return ""  # No original content found
+    else:
+        # If translations are at the bottom, original content is before the first translation
+        return parts[0].strip()
 
 def translate_issue(issue, target_languages):
     """
-    Translate the issue body to the target languages, replacing any existing translations.
+    Translate the issue body to the target languages, placing translations before the original content.
     """
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
@@ -43,23 +68,30 @@ def translate_issue(issue, target_languages):
         print(f"Could not identify original content for Issue #{issue.number}. Skipping.")
         return False
 
+    print(f"Original content detected: {original_content[:100]}...")  # Debug log
+
     # Translate the original content into target languages
     translations = []
     for language in target_languages:
         print(f"Translating content to {language}...")
         try:
             translation = translate_text(original_content, language)
-            translations.append(f"**Translation to {language}:**\n\n{translation}")
+            translations.append(f"{TRANSLATION_MARKER} {language}:**\n\n{translation}")
         except Exception as e:
             print(f"Error translating to {language}: {e}")
+            continue
 
     if translations:
-        # Combine original content with the new translations, separated by newlines
-        updated_body = f"{original_content}\n\n" + "\n\n".join(translations)
+        # Place translations before the original content with clear separation
+        updated_body = "\n\n".join(translations) + "\n\n" + ORIGINAL_MARKER + "\n\n" + original_content
         print(f"Updating issue #{issue.number} with new translations...")
-        issue.edit(body=updated_body)
-        print(f"Issue #{issue.number} updated successfully.")
-        return True
+        try:
+            issue.edit(body=updated_body)
+            print(f"Issue #{issue.number} updated successfully.")
+            return True
+        except Exception as e:
+            print(f"Error updating issue: {e}")
+            return False
     else:
         print(f"No translations were added for Issue #{issue.number}.")
         return False
