@@ -63,7 +63,6 @@ jobs:
           cp target-repo/README.md bilingual-github/README.md || echo "No README.md found"
 
       - name: Translate Markdown Files
-        working-directory: bilingual-github
         run: |
           python src/hooks/post_commit.py
           echo "Git status after translation script:"
