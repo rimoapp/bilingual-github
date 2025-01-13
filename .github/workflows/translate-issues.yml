@@ -8,7 +8,7 @@ on:
     inputs:
       issue_number:
         required: true
-        type: string # Issue number as a string, as GitHub Actions passes inputs as strings.
+        type: string 
 
 jobs:
   translate:
@@ -20,13 +20,7 @@ jobs:
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
-          repository: rimoapp/bilingual-github  # Corrected repository name
-            # Correct token for the target repository
-
-      - name: Debug - List files and directories
-        run: |
-          echo "Current Directory: $(pwd)"
-          ls -la
+          repository: rimoapp/bilingual-github  
 
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -43,4 +37,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ISSUE_NUMBER: ${{ inputs.issue_number }}  # Pass issue_number input as an environment variable
+          ISSUE_NUMBER: ${{ inputs.issue_number }}  
