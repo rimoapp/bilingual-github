@@ -6,7 +6,7 @@ on:
       target_repo:
         required: true
         type: string
-        description: "The repository to translate (format: owner/repo)"
+        description: rimoapp/bilingual-testing
     secrets:
       OPENAI_API_KEY:
         required: true
