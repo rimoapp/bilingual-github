@@ -17,8 +17,11 @@ TARGET_LANGUAGES = ["ja", "fr"]
 # Get target repository directory from environment variables
 TARGET_REPO_DIR = os.getenv("GITHUB_REPOSITORY", "").strip()
 
+print(f"TARGET_REPO_DIR: {TARGET_REPO_DIR}")
 if not TARGET_REPO_DIR or not os.path.isdir(TARGET_REPO_DIR):
     raise ValueError("Target repository directory is not set or doesn't exist")
+else:
+    print(f"Directory exists: {TARGET_REPO_DIR}")
 
 # Function to recursively find Markdown files in the target directory
 def find_markdown_files(directory):

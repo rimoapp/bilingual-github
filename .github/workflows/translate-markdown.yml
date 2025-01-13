@@ -20,6 +20,9 @@ jobs:
         with:
           repository: rimoapp/bilingual-github  
 
+      - name: Debug Checkout Directory
+        run: ls -la ${{ github.workspace }}
+
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
@@ -39,6 +42,7 @@ jobs:
         run: python src/hooks/post_commit.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.workspace }}
 
       - name: Commit and Push Changes
         run: |
@@ -48,4 +52,3 @@ jobs:
             git push origin HEAD:${GITHUB_REF#refs/heads/}
           else
             echo "No changes to commit"
-          fi
