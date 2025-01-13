@@ -37,63 +37,55 @@ def separate_original_content(issue_body, target_languages):
     return "\n".join(original_content).strip()
 
 
-def extract_new_content(original_content, existing_translations):
+def remove_existing_translations(issue_body, target_languages):
     """
-    Extract new or modified content by comparing the original content
-    against existing translations.
+    Remove existing translations for all target languages from the issue body.
     """
-    new_lines = []
-    for line in original_content.splitlines():
-        if not any(translation_marker in line for translation_marker in existing_translations):
-            new_lines.append(line)
-    return "\n".join(new_lines).strip()
+    lines = issue_body.splitlines()
+    updated_body = []
+    in_translation_section = False
 
+    for line in lines:
+        if any(f"**Translation to {lang}:" in line for lang in target_languages):
+            in_translation_section = True
+        elif line.strip() == "" and in_translation_section:
+            in_translation_section = False
+        elif not in_translation_section:
+            updated_body.append(line)
 
-def is_translation_present(issue, language):
-    """Check if a translation for a specific language exists in the issue body."""
-    marker = f"**Translation to {language}:**"
-    return marker in issue.body if issue.body else False
+    return "\n".join(updated_body).strip()
 
 
 def translate_issue(issue, target_languages):
     """
-    Translate the issue body to the target languages, detecting new/edited content.
+    Translate the issue body to the target languages, replacing old translations with updated ones.
     """
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
         return False  # Return False if no translation was performed
 
-    # Detect existing translations
-    existing_translations = [f"**Translation to {lang}:**" for lang in target_languages]
-
-    # Separate original content from translations
+    # Separate original content and remove existing translations
     original_content = separate_original_content(issue.body, target_languages)
     if not original_content:
         print(f"Could not identify original content for Issue #{issue.number}. Skipping.")
         return False
 
-    # Extract new or modified content
-    new_content = extract_new_content(original_content, existing_translations)
-    # if not new_content:
-    #     print(f"No new content to translate for Issue #{issue.number}. Skipping.")
-    #     return False
+    # Remove existing translations from the body
+    issue_body_without_translations = remove_existing_translations(issue.body, target_languages)
 
+    # Translate the original content into target languages
     translations = []
     for language in target_languages:
-        # if is_translation_present(issue, language):
-        #     print(f"Issue #{issue.number} already translated to {language}. Skipping.")
-        #     continue
-
-        print(f"Translating new content to {language}...")
+        print(f"Translating content to {language}...")
         try:
-            translation = translate_text(new_content, language)
+            translation = translate_text(original_content, language)
             translations.append(f"**Translation to {language}:**\n\n{translation}")
         except Exception as e:
             print(f"Error translating to {language}: {e}")
 
     if translations:
-        # Append translations below the existing body
-        updated_body = issue.body + "\n\n" + "\n\n".join(translations)
+        # Append new translations to the issue body
+        updated_body = issue_body_without_translations + "\n\n" + "\n\n".join(translations)
         print(f"Updating issue #{issue.number} with new translations...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} updated successfully.")
