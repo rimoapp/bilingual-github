@@ -18,12 +18,32 @@ TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 
 
-def extract_new_content(issue_body, existing_translations):
+def separate_original_content(issue_body, target_languages):
     """
-    Extract new or modified content from the issue body by excluding existing translations.
+    Extract only the original content from the issue body, excluding any translations.
+    """
+    lines = issue_body.splitlines()
+    original_content = []
+    in_translation_section = False
+
+    for line in lines:
+        if any(f"**Translation to {lang}:" in line for lang in target_languages):
+            in_translation_section = True
+        elif line.strip() == "" and in_translation_section:
+            in_translation_section = False
+        elif not in_translation_section:
+            original_content.append(line)
+
+    return "\n".join(original_content).strip()
+
+
+def extract_new_content(original_content, existing_translations):
+    """
+    Extract new or modified content by comparing the original content
+    against existing translations.
     """
     new_lines = []
-    for line in issue_body.splitlines():
+    for line in original_content.splitlines():
         if not any(translation_marker in line for translation_marker in existing_translations):
             new_lines.append(line)
     return "\n".join(new_lines).strip()
@@ -46,8 +66,14 @@ def translate_issue(issue, target_languages):
     # Detect existing translations
     existing_translations = [f"**Translation to {lang}:**" for lang in target_languages]
 
+    # Separate original content from translations
+    original_content = separate_original_content(issue.body, target_languages)
+    if not original_content:
+        print(f"Could not identify original content for Issue #{issue.number}. Skipping.")
+        return False
+
     # Extract new or modified content
-    new_content = extract_new_content(issue.body, existing_translations)
+    new_content = extract_new_content(original_content, existing_translations)
     if not new_content:
         print(f"No new content to translate for Issue #{issue.number}. Skipping.")
         return False
