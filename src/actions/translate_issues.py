@@ -31,7 +31,7 @@ def get_original_content(issue_body):
 
 def translate_issue(issue, target_languages):
     """
-    Translate the issue body to the target languages, placing translations before the original content.
+    Translate the issue body to the target languages, replacing any existing translations.
     """
     if not issue.body:
         print(f"Issue #{issue.number} has no body to translate. Skipping.")
@@ -54,8 +54,8 @@ def translate_issue(issue, target_languages):
             print(f"Error translating to {language}: {e}")
 
     if translations:
-        # Place translations before the original content
-        updated_body = "\n\n".join(translations) + "\n\n**Original Content:**\n\n" + original_content
+        # Combine original content with the new translations, separated by newlines
+        updated_body = f"{original_content}\n\n" + "\n\n".join(translations)
         print(f"Updating issue #{issue.number} with new translations...")
         issue.edit(body=updated_body)
         print(f"Issue #{issue.number} updated successfully.")
