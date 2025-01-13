@@ -7,6 +7,11 @@ on:
         required: true
       PAT:
         required: true
+    inputs:
+      target_repo:
+        required: true
+        type: string
+        description: "The repository to translate (format: owner/repo)"
 
 jobs:
   translate-markdown:
@@ -15,11 +20,18 @@ jobs:
       contents: write
     
     steps:
-      - name: Checkout Repository
+      - name: Checkout Translation Tools
         uses: actions/checkout@v3
         with:
           fetch-depth: 2 
-          repository: rimoapp/bilingual-github
+          path: bilingual-github
+          token: ${{ secrets.PAT }}
+
+      - name: Checkout Target Repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.target_repo }}
+          path: target-repo
           token: ${{ secrets.PAT }}
 
       - name: Set Up Python
@@ -28,23 +40,31 @@ jobs:
           python-version: '3.8'
 
       - name: Install Dependencies
+        working-directory: bilingual-github
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Configure Git
+        working-directory: target-repo
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: List Files Before Translation
+        working-directory: target-repo
         run: |
           echo "Current directory contents:"
           ls -la
           echo "Git status before translation:"
           git status
 
+      - name: Copy README to Process
+        run: |
+          cp target-repo/README.md bilingual-github/README.md || echo "No README.md found"
+
       - name: Translate Markdown Files
+        working-directory: bilingual-github
         run: |
           python src/hooks/post_commit.py
           echo "Git status after translation script:"
@@ -52,16 +72,12 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Debug File Changes
+      - name: Copy Translations Back
         run: |
-          echo "Directory contents after translation:"
-          ls -la
-          echo "Git status details:"
-          git status --porcelain
-          echo "Modified files:"
-          git diff --name-only
+          cp bilingual-github/README.*.md target-repo/ || echo "No translations generated"
 
       - name: Commit and Push Changes
+        working-directory: target-repo
         run: |
           changes=$(git status --porcelain)
           if [[ -n "$changes" ]]; then
@@ -69,7 +85,7 @@ jobs:
             echo "$changes"
             git add .
             git commit -m "Add translated markdown files [skip ci]"
-            git push origin HEAD:${GITHUB_REF#refs/heads/}
+            git push
           else
             echo "No changes detected in git status:"
             git status
