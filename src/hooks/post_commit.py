@@ -4,12 +4,14 @@ import subprocess
 from pathlib import Path
 from difflib import unified_diff
 
+# Add the script's src directory to the path
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
 sys.path.insert(0, src_dir)
 
 from utils.translation import translate_text
 
+# Define target languages for translation
 TARGET_LANGUAGES = ["ja", "fr"]
 
 def read_file(file_path):
@@ -23,9 +25,7 @@ def read_file(file_path):
 def save_translated_file(file_path, content, language):
     translated_file = Path(file_path).with_suffix(f'.{language}.md')
     translated_file.write_text(content, encoding='utf-8')
-    # Stage the translated file
-    subprocess.run(["git", "add", str(translated_file)])
-    print(f"Staged file: {translated_file}")
+    print(f"Generated translated file: {translated_file}")
 
 def get_changed_files():
     try:
@@ -81,7 +81,7 @@ def sync_translations(original_file, target_languages):
                 translated_content = translate_text(content, language)
                 if translated_content:
                     save_translated_file(original_file, translated_content, language)
-                    print(f"Updated translation and staged {translated_file}")
+                    print(f"Updated translation for {translated_file}")
             else:
                 print(f"No changes detected for {translated_file}. Skipping.")
 
@@ -89,6 +89,7 @@ def sync_translations(original_file, target_languages):
         print(f"Error processing {original_file}: {str(e)}")
 
 def main():
+    # Get changed files in the repository
     changed_files = get_changed_files()
     for file in changed_files:
         if os.path.exists(file) and is_original_markdown(file):
