@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+from pathlib import Path
 from difflib import unified_diff
 
 script_dir = os.path.dirname(__file__)
@@ -12,46 +13,72 @@ from utils.translation import translate_text
 TARGET_LANGUAGES = ["ja", "fr"]
 
 def read_file(file_path):
-    encodings = ["utf-8-sig", "utf-8", "latin-1", "cp1252"]
-    for encoding in encodings:
-        with open(file_path, "r", encoding=encoding) as file:
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            return file.read()
+    except UnicodeDecodeError:
+        with open(file_path, "r", encoding="utf-8-sig") as file:
             return file.read()
 
 def save_translated_file(file_path, content, language):
-    translated_file = f"{file_path.split('.')[0]}.{language}.md"
-    with open(translated_file, "w", encoding="utf-8") as file:
-        file.write(content)
+    translated_file = Path(file_path).with_suffix(f'.{language}.md')
+    translated_file.write_text(content, encoding='utf-8')
 
 def get_changed_files():
-    result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD~1", "HEAD"], 
-        capture_output=True, 
-        text=True
-    )
-    return [f.strip() for f in result.stdout.split("\n") if f.strip()]
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return [f for f in result.stdout.splitlines() if f.strip()]
+    except subprocess.CalledProcessError:
+        # Handle case where there might not be a previous commit
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return [line[3:] for line in result.stdout.splitlines() if line.strip()]
 
 def is_original_markdown(file_path):
-    return file_path.endswith(".md") and not any(file_path.endswith(f".{lang}.md") for lang in TARGET_LANGUAGES)
+    path = Path(file_path)
+    return (path.suffix == '.md' and 
+            not any(path.name.endswith(f'.{lang}.md') for lang in TARGET_LANGUAGES))
 
 def sync_translations(original_file, target_languages):
-    content = read_file(original_file)
-    for language in target_languages:
-        translated_file = f"{original_file.split('.')[0]}.{language}.md"
+    try:
+        content = read_file(original_file)
+        original_path = Path(original_file)
 
-        if os.path.exists(translated_file):
-            existing_translation = read_file(translated_file)
-            diff = unified_diff(existing_translation.splitlines(), content.splitlines(), lineterm="")
-            if list(diff):
+        for language in target_languages:
+            translated_file = original_path.with_suffix(f'.{language}.md')
+            
+            needs_translation = True
+            if translated_file.exists():
+                existing_translation = read_file(translated_file)
+                diff = list(unified_diff(
+                    existing_translation.splitlines(),
+                    content.splitlines(),
+                    lineterm=""
+                ))
+                needs_translation = bool(diff)
+
+            if needs_translation:
                 translated_content = translate_text(content, language)
-                save_translated_file(original_file, translated_content, language)
-        else:
-            translated_content = translate_text(content, language)
-            save_translated_file(original_file, translated_content, language)
+                if translated_content:
+                    save_translated_file(original_file, translated_content, language)
+                    print(f"Updated translation for {translated_file}")
+
+    except Exception as e:
+        print(f"Error processing {original_file}: {str(e)}")
 
 def main():
     changed_files = get_changed_files()
     for file in changed_files:
-        if is_original_markdown(file):
+        if os.path.exists(file) and is_original_markdown(file):
             sync_translations(file, TARGET_LANGUAGES)
 
 if __name__ == "__main__":

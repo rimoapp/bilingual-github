@@ -1,20 +1,25 @@
 name: Translate Markdown Files
 
 on:
-  workflow_call: 
-    secrets: 
+  workflow_call:
+    secrets:
       OPENAI_API_KEY:
+        required: true
+      GITHUB_TOKEN:
         required: true
 
 jobs:
   translate-markdown:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          repository: rimoapp/bilingual-github
+          fetch-depth: 2
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -26,25 +31,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # - name: Debug Git State
-      #   run: |
-      #     echo "Current Git State:"
-      #     git log --oneline -5
-      #     echo "Changed Files:"
-      #     git diff --name-only HEAD~1 HEAD
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Translate Markdown Files
         run: python src/hooks/post_commit.py
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Configure Git
+      - name: Commit and Push Changes
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-
-      - name: Commit Translated Files
-        run: |
-          git add .
-          git commit -m "Add translated markdown files" || echo "No changes to commit"
-          git push
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .
+            git commit -m "Add translated markdown files [skip ci]"
+            git push origin HEAD:${GITHUB_REF#refs/heads/}
+          else
+            echo "No changes to commit"
+          fi
