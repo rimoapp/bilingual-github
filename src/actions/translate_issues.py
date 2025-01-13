@@ -80,9 +80,9 @@ def translate_issue(issue, target_languages):
 
     translations = []
     for language in target_languages:
-        if is_translation_present(issue, language):
-            print(f"Issue #{issue.number} already translated to {language}. Skipping.")
-            continue
+        # if is_translation_present(issue, language):
+        #     print(f"Issue #{issue.number} already translated to {language}. Skipping.")
+        #     continue
 
         print(f"Translating new content to {language}...")
         try:
