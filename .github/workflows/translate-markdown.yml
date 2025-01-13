@@ -5,7 +5,7 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: true
-      GITHUB_TOKEN:
+      PAT:
         required: true
 
 jobs:
