@@ -23,25 +23,36 @@ def read_file(file_path):
 def save_translated_file(file_path, content, language):
     translated_file = Path(file_path).with_suffix(f'.{language}.md')
     translated_file.write_text(content, encoding='utf-8')
+    # Stage the translated file
+    subprocess.run(["git", "add", str(translated_file)])
+    print(f"Staged file: {translated_file}")
 
 def get_changed_files():
     try:
+        # Check for changed and staged files
         result = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+            ["git", "diff", "--name-only", "--cached"],
             capture_output=True,
             text=True,
             check=True
         )
-        return [f for f in result.stdout.splitlines() if f.strip()]
-    except subprocess.CalledProcessError:
-        # Handle case where there might not be a previous commit
+        staged_files = [f for f in result.stdout.splitlines() if f.strip()]
+
+        # Check for untracked files
         result = subprocess.run(
-            ["git", "status", "--porcelain"],
+            ["git", "ls-files", "--others", "--exclude-standard"],
             capture_output=True,
             text=True,
             check=True
         )
-        return [line[3:] for line in result.stdout.splitlines() if line.strip()]
+        untracked_files = [f for f in result.stdout.splitlines() if f.strip()]
+
+        # Combine and return both staged and untracked files
+        return list(set(staged_files + untracked_files))
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error detecting changed files: {str(e)}")
+        return []
 
 def is_original_markdown(file_path):
     path = Path(file_path)
@@ -70,7 +81,9 @@ def sync_translations(original_file, target_languages):
                 translated_content = translate_text(content, language)
                 if translated_content:
                     save_translated_file(original_file, translated_content, language)
-                    print(f"Updated translation for {translated_file}")
+                    print(f"Updated translation and staged {translated_file}")
+            else:
+                print(f"No changes detected for {translated_file}. Skipping.")
 
     except Exception as e:
         print(f"Error processing {original_file}: {str(e)}")
