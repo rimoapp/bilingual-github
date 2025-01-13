@@ -1,7 +1,7 @@
 name: Translate Markdown Files
 
 on:
-  workflow_call: # Makes this workflow reusable
+  workflow_call: 
     secrets: 
       OPENAI_API_KEY:
         required: true
@@ -14,12 +14,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch full Git history
+          repository: rimoapp/bilingual-github
 
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.8'
 
       - name: Install Dependencies
         run: |
@@ -34,10 +34,9 @@ jobs:
           git diff --name-only HEAD~1 HEAD
 
       - name: Translate Markdown Files
+        run: python src/hooks/post_commit.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
-        run: |
-          python src/hooks/post_commit.py
 
       - name: Configure Git
         run: |
