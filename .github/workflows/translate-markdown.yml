@@ -18,7 +18,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          repository: rimoapp/bilingual-github
+          fetch-depth: 2
+          token: ${{ secrets.PAT }}
 
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -35,17 +36,42 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: List Files Before Translation
+        run: |
+          echo "Current directory contents:"
+          ls -la
+          echo "Git status before translation:"
+          git status
+
       - name: Translate Markdown Files
-        run: python src/hooks/post_commit.py
+        run: |
+          python src/hooks/post_commit.py
+          echo "Git status after translation script:"
+          git status
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+      - name: Debug File Changes
+        run: |
+          echo "Directory contents after translation:"
+          ls -la
+          echo "Git status details:"
+          git status --porcelain
+          echo "Modified files:"
+          git diff --name-only
+
       - name: Commit and Push Changes
         run: |
-          if [[ -n $(git status --porcelain) ]]; then
+          changes=$(git status --porcelain)
+          if [[ -n "$changes" ]]; then
+            echo "Changes detected:"
+            echo "$changes"
             git add .
             git commit -m "Add translated markdown files [skip ci]"
             git push origin HEAD:${GITHUB_REF#refs/heads/}
           else
-            echo "No changes to commit"
+            echo "No changes detected in git status:"
+            git status
+            echo "Directory contents:"
+            ls -la
           fi
