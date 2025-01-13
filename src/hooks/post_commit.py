@@ -35,8 +35,9 @@ def save_translated_file(file_path, content, language):
 def get_changed_files():
     print("Checking for changed files...")
     try:
+        # First try getting the base ref for pull requests
         result = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+            ["git", "diff", "--name-only", "HEAD"],
             capture_output=True,
             text=True,
             check=True
@@ -47,15 +48,19 @@ def get_changed_files():
     except subprocess.CalledProcessError as e:
         print(f"Error running git diff: {e}")
         print("Falling back to git status...")
-        result = subprocess.run(
-            ["git", "status", "--porcelain"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        files = [line[3:] for line in result.stdout.splitlines() if line.strip()]
-        print(f"Found {len(files)} changed files using git status: {files}")
-        return files
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            files = [line[3:] for line in result.stdout.splitlines() if line.strip()]
+            print(f"Found {len(files)} changed files using git status: {files}")
+            return files
+        except subprocess.CalledProcessError as e:
+            print(f"Error running git status: {e}")
+            return []
 
 def is_original_markdown(file_path):
     path = Path(file_path)
