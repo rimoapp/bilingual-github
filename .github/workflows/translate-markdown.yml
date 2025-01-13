@@ -6,7 +6,7 @@ on:
       target_repo:
         required: true
         type: string
-        description: rimoapp/bilingual-testing
+        description: "rimoapp/bilingual-testing"
     secrets:
       OPENAI_API_KEY:
         required: true
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 2 
-          path: bilingual-github
+          repository: rimoapp/bilingual-github  
           token: ${{ secrets.PAT }}
 
       - name: Checkout Target Repository
