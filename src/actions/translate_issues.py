@@ -26,6 +26,12 @@ def get_original_content(issue_body):
 
     return issue_body.strip()
 
+def detect_language(issue_body):
+    # Basic language detection (English vs Japanese for simplicity)
+    if any(ord(char) > 128 for char in issue_body):  # Checks for non-ASCII characters (mostly Japanese)
+        return "ja"
+    return "en"  # Default to English if it's not detected as Japanese
+
 def translate_issue(issue, target_languages):
     if not issue.body:
         return False
@@ -60,7 +66,16 @@ def main():
         repo = g.get_repo(REPO_NAME)
         issue = repo.get_issue(number=issue_number)
 
-        if translate_issue(issue, ["ja", "fr"]):
+        # Detect the language of the issue
+        original_language = detect_language(issue.body)
+
+        # Set target languages based on the detected language
+        if original_language == "en":
+            target_languages = ["ja", "fr"]  # If the original issue is in English, translate to Japanese and French
+        elif original_language == "ja":
+            target_languages = ["en"]  # If the original issue is in Japanese, translate to English
+
+        if translate_issue(issue, target_languages):
             issue.add_to_labels(TRANSLATED_LABEL)
 
     except ValueError:
