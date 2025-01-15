@@ -14,6 +14,11 @@ TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 ORIGINAL_MARKER = "**Original Content:**"
 
+LANGUAGE_NAMES = {
+    "ja": "日本語",  # Japanese
+    "fr": "Français",  # French
+}
+
 def get_original_content(issue_body):
     if ORIGINAL_MARKER in issue_body:
         parts = issue_body.split(ORIGINAL_MARKER)
@@ -33,8 +38,9 @@ def translate_issue(issue, target_languages):
     for language in target_languages:
         translation = translate_text(original_content, language)
         if translation:
+            language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             translations.append(
-                f"<details>\n<summary>{language.capitalize()}</summary>\n\n{translation}\n</details>"
+                f"<details>\n<summary>{language_name}</summary>\n\n{translation}\n</details>"
             )
 
     if translations:
