@@ -17,6 +17,7 @@ ORIGINAL_MARKER = "**Original Content:**"
 LANGUAGE_NAMES = {
     "ja": "日本語",  # Japanese
     "fr": "Français",  # French
+    "en": "English"  
 }
 
 def get_original_content(issue_body):
