@@ -16,8 +16,8 @@ COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
 COMMENT_ORIGINAL_MARKER = "**Original Comment:**"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",  
-    "fr": "Français", 
+    "ja": "日本語",  # Japanese
+    "fr": "Français",  # French
     "en": "English"  
 }
 
@@ -28,23 +28,48 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    if any(ord(char) > 128 for char in text):  
+    # Basic language detection (English vs Japanese for simplicity)
+    if any(ord(char) > 128 for char in text):  # Checks for non-ASCII characters (mostly Japanese)
         return "ja"
-    return "en"  
+    return "en"  # Default to English if it's not detected as Japanese
 
-def format_translations(translations, original_content):
+def get_target_languages(original_language):
+    """
+    Determine which languages to translate to based on the original language
+    """
+    if original_language == "en":
+        return ["ja", "fr"]
+    elif original_language == "ja":
+        return ["en"]
+    elif original_language == "fr":
+        return ["en"]
+    return ["en"]  # Default case
+
+def format_translations(translations, original_content, original_language):
+    """
+    Format translations with details/summary tags, showing only relevant languages
+    """
     formatted_translations = []
-    for language, translation in translations.items():
-        language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-        formatted_translations.append(
-            f"<details>\n<summary>{language_name}</summary>\n\n{translation}\n</details>"
-        )
     
-    return "\n\n".join(formatted_translations) + f"\n\n{COMMENT_ORIGINAL_MARKER}\n\n{original_content}"
+    # Add original language section first
+    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
+    formatted_translations.append(
+        f"<details open>\n<summary>{original_lang_name}</summary>\n\n{original_content}\n</details>"
+    )
+    
+    # Add translations in other languages
+    for language, translation in translations.items():
+        if translation and language != original_language:
+            language_name = LANGUAGE_NAMES.get(language, language.capitalize())
+            formatted_translations.append(
+                f"<details>\n<summary>{language_name}</summary>\n\n{translation}\n</details>"
+            )
+    
+    return "\n\n".join(formatted_translations)
 
 def translate_content(content, original_language):
-    translations = {}
-    target_languages = ["ja", "fr"] if original_language == "en" else ["en"]
+    translations = {original_language: content}  # Include original content in translations dict
+    target_languages = get_target_languages(original_language)
     
     for language in target_languages:
         translation = translate_text(content, language)
@@ -53,15 +78,21 @@ def translate_content(content, original_language):
     
     return translations
 
-def should_retranslate(current_content, stored_original):
+def extract_original_content(content):
     """
-    Check if the comment needs to be retranslated by comparing the current content
-    with the stored original content
+    Extract the original content from a formatted comment
     """
-    current_content = current_content.strip().replace('\r\n', '\n')
-    stored_original = stored_original.strip().replace('\r\n', '\n')
-    
-    return current_content != stored_original
+    if "<details open>" in content:
+        # Find the content between first <details open> and </details>
+        start = content.find("<details open>")
+        end = content.find("</details>", start)
+        if start != -1 and end != -1:
+            section = content[start:end]
+            # Get content after summary tag
+            summary_end = section.find("</summary>")
+            if summary_end != -1:
+                return section[summary_end + 10:].strip()
+    return content.strip()
 
 def translate_comment(comment):
     if not comment.body:
@@ -69,25 +100,18 @@ def translate_comment(comment):
         
     current_content = comment.body.strip()
     
-    if COMMENT_ORIGINAL_MARKER in current_content:
-        stored_original = get_original_content(current_content)
-        current_original = current_content.split(COMMENT_ORIGINAL_MARKER)[0].strip()
-        
-        if not should_retranslate(current_original, stored_original):
-            print("Comment content hasn't changed, skipping translation")
-            return False
-            
-        original_content = current_original
-    else:
-        original_content = current_content
-
+    # Extract the actual content to translate
+    original_content = extract_original_content(current_content)
+    
+    # Detect language and translate
     original_language = detect_language(original_content)
     translations = translate_content(original_content, original_language)
     
     if translations:
-        updated_body = format_translations(translations, original_content)
-        comment.edit(body=updated_body)
-        return True
+        updated_body = format_translations(translations, original_content, original_language)
+        if updated_body != comment.body:
+            comment.edit(body=updated_body)
+            return True
     
     return False
 
@@ -106,6 +130,7 @@ def main():
         comment = issue.get_comment(comment_id)
 
         if translate_comment(comment):
+            # Only add the translated label if it's not already present
             labels = [label.name for label in issue.labels]
             if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
