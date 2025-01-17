@@ -2,11 +2,11 @@ import sys
 import os
 from github import Github
 
-script_dir = os.path.dirname(__file__)
-src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
-sys.path.append(src_dir)
+# script_dir = os.path.dirname(__file__)
+# src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
+# sys.path.append(src_dir)
 
-from utils.translation import translate_text
+from src.utils.translation import translate_text
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
@@ -16,8 +16,8 @@ COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
 COMMENT_ORIGINAL_MARKER = "**Original Comment:**"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",  # Japanese
-    "fr": "Français",  # French
+    "ja": "日本語",  
+    "fr": "Français", 
     "en": "English"  
 }
 
@@ -28,10 +28,9 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    # Basic language detection (English vs Japanese for simplicity)
-    if any(ord(char) > 128 for char in text):  # Checks for non-ASCII characters (mostly Japanese)
+    if any(ord(char) > 128 for char in text):  
         return "ja"
-    return "en"  # Default to English if it's not detected as Japanese
+    return "en"  
 
 def format_translations(translations, original_content):
     formatted_translations = []
@@ -54,11 +53,34 @@ def translate_content(content, original_language):
     
     return translations
 
-def translate_comment(comment):
-    if not comment.body or COMMENT_ORIGINAL_MARKER in comment.body:
-        return False
+def should_retranslate(current_content, stored_original):
+    """
+    Check if the comment needs to be retranslated by comparing the current content
+    with the stored original content
+    """
+    current_content = current_content.strip().replace('\r\n', '\n')
+    stored_original = stored_original.strip().replace('\r\n', '\n')
+    
+    return current_content != stored_original
 
-    original_content = comment.body.strip()
+def translate_comment(comment):
+    if not comment.body:
+        return False
+        
+    current_content = comment.body.strip()
+    
+    if COMMENT_ORIGINAL_MARKER in current_content:
+        stored_original = get_original_content(current_content)
+        current_original = current_content.split(COMMENT_ORIGINAL_MARKER)[0].strip()
+        
+        if not should_retranslate(current_original, stored_original):
+            print("Comment content hasn't changed, skipping translation")
+            return False
+            
+        original_content = current_original
+    else:
+        original_content = current_content
+
     original_language = detect_language(original_content)
     translations = translate_content(original_content, original_language)
     
@@ -84,11 +106,10 @@ def main():
         comment = issue.get_comment(comment_id)
 
         if translate_comment(comment):
-            # Only add the translated label if it's not already present
             labels = [label.name for label in issue.labels]
             if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
-
+        
     except ValueError as ve:
         print(f"Invalid number format: {ve}")
         return
