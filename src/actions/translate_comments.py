@@ -2,11 +2,11 @@ import sys
 import os
 from github import Github
 
-# script_dir = os.path.dirname(__file__)
-# src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
-# sys.path.append(src_dir)
+script_dir = os.path.dirname(__file__)
+src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
+sys.path.append(src_dir)
 
-from src.utils.translation import translate_text
+from utils.translation import translate_text
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
