@@ -33,9 +33,6 @@ def detect_language(text):
     return "en"  
 
 def get_target_languages(original_language):
-    """
-    Determine which languages to translate to based on the original language
-    """
     if original_language == "en":
         return ["ja", "fr"]
     elif original_language == "ja":
@@ -47,22 +44,20 @@ def get_target_languages(original_language):
 def format_translations(translations, original_content, original_language):
     formatted_parts = []
     
-    
     for language, translation in translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             formatted_parts.append(
-                f"<details>\n<summary>**{language_name}**</summary>\n\n{translation}\n</details>"
+                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
     
-    # Add original content without details/summary tags
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
     
     return "\n\n".join(formatted_parts)
 
 def translate_content(content, original_language):
-    translations = {original_language: content}  # Include original content in translations dict
+    translations = {original_language: content}  
     target_languages = get_target_languages(original_language)
     
     for language in target_languages:
@@ -73,9 +68,6 @@ def translate_content(content, original_language):
     return translations
 
 def extract_original_content(content):
-    """
-    Extract the original content from a formatted comment
-    """
     if ORIGINAL_CONTENT_MARKER in content:
         parts = content.split(ORIGINAL_CONTENT_MARKER)
         return parts[1].strip()
@@ -87,10 +79,8 @@ def translate_comment(comment):
         
     current_content = comment.body.strip()
     
-    # Extract the actual content to translate
     original_content = extract_original_content(current_content)
     
-    # Detect language and translate
     original_language = detect_language(original_content)
     translations = translate_content(original_content, original_language)
     
@@ -117,7 +107,6 @@ def main():
         comment = issue.get_comment(comment_id)
 
         if translate_comment(comment):
-            # Only add the translated label if it's not already present
             labels = [label.name for label in issue.labels]
             if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
