@@ -52,7 +52,7 @@ def format_translations(translations, original_content, original_language):
             )
     
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
-    formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n<b>{original_content}</b>")
+    formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
     
     return "\n\n".join(formatted_parts)
 
