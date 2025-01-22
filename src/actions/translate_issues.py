@@ -39,7 +39,6 @@ def translate_issue(issue, target_languages):
         return False
 
     original_title = issue.title
-    title_language = detect_language(original_title)
     translated_title = translate_text(original_title, target_languages[0])
 
     translations = []
