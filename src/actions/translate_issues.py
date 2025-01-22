@@ -12,7 +12,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
 TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
-ORIGINAL_MARKER = "**Original Content:**"
+ORIGINAL_MARKER = "Original Content:"
 
 LANGUAGE_NAMES = {
     "ja": "日本語",
@@ -52,8 +52,9 @@ def translate_issue(issue, target_languages):
                 f"\n<h2>{translated_title}</h2>\n\n<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
 
+    original_language_name = LANGUAGE_NAMES.get(content_language, content_language.capitalize())
     if translations:
-        updated_body = "\n\n".join(translations) + f"\n\n{ORIGINAL_MARKER}\n\n{original_content}"
+        updated_body = "\n\n".join(translations) + f"\n\n<details>\n<summary><b>{original_language_name}</b></summary>\n\n{original_content}\n</details>"
         issue.edit(body=updated_body)
         return True
 
