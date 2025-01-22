@@ -37,6 +37,7 @@ def get_target_languages(original_language):
     elif original_language == "ja":
         return ["en"]
 
+
 def format_translations(translations, original_content, original_language):
     formatted_parts = []
     
@@ -47,7 +48,8 @@ def format_translations(translations, original_content, original_language):
                 f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
     
-    formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
+    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
+    formatted_parts.append(f"<b>{original_lang_name}:</b>\n{original_content}")
     
     return "\n\n".join(formatted_parts)
 
