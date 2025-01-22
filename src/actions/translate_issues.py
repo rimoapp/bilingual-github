@@ -45,7 +45,7 @@ def translate_issue(issue, target_languages):
         if translation:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             translations.append(
-                f"<details>\n<summary><b>{language_name}<b></summary>\n\n{translation}\n</details>"
+                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
 
     if translations:
