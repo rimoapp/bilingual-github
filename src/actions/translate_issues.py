@@ -39,7 +39,6 @@ def translate_issue(issue, target_languages):
     if not original_content:
         return False
 
-    # Detect and translate title
     original_title = issue.title
     title_language = detect_language(original_title)
     translated_title = translate_text(original_title, target_languages[0])
@@ -49,9 +48,10 @@ def translate_issue(issue, target_languages):
         translation = translate_text(original_content, language)
         if translation:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            if language == target_languages[0]:  # Add translated title with the first translation
+            if language == target_languages[0]:  
                 translations.append(
-                    f"\n{language_name}\n\nTitle: {translated_title}\n\n{translation}\n"
+                    f"**<h1>{translated_title}</h1>**\n\n"
+                    f"<p>{translation}</p>"
                 )
             else:
                 translations.append(
@@ -59,7 +59,7 @@ def translate_issue(issue, target_languages):
                 )
 
     if translations:
-        updated_body = "\n\n".join(translations) + f"\n\n{ORIGINAL_TITLE_MARKER}\n\n{original_title}\n\n{ORIGINAL_MARKER}\n\n{original_content}"
+        updated_body = "\n\n".join(translations) + f"\n\n{ORIGINAL_MARKER}\n\n{original_content}"
         issue.edit(body=updated_body)
         return True
 
