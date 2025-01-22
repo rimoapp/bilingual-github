@@ -69,7 +69,7 @@ def main():
 
         # Set target languages based on the detected language
         if original_language == "en":
-            target_languages = ["ja", "fr"]  
+            target_languages = ["ja"]  
         elif original_language == "ja":
             target_languages = ["en"]  
 
