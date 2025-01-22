@@ -23,7 +23,6 @@ def get_original_content(issue_body):
     if ORIGINAL_MARKER in issue_body:
         parts = issue_body.split(ORIGINAL_MARKER)
         return parts[1].strip()
-
     return issue_body.strip()
 
 def detect_language(issue_body):
@@ -39,13 +38,17 @@ def translate_issue(issue, target_languages):
     if not original_content:
         return False
 
+    original_title = issue.title
+    title_language = detect_language(original_title)
+    translated_title = translate_text(original_title, target_languages[0])
+
     translations = []
     for language in target_languages:
         translation = translate_text(original_content, language)
         if translation:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             translations.append(
-                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
+                f"\n<h2>{translated_title}</h2>\n\n<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
 
     if translations:
