@@ -15,8 +15,8 @@ ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 ORIGINAL_MARKER = "**Original Content:**"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",  
-    "en": "English"  
+    "ja": "日本語",
+    "en": "English"
 }
 
 def get_original_content(issue_body):
@@ -25,10 +25,10 @@ def get_original_content(issue_body):
         return parts[1].strip()
     return issue_body.strip()
 
-def detect_language(issue_body):
-    if any(ord(char) > 128 for char in issue_body):  
+def detect_language(text):
+    if any(ord(char) > 128 for char in text):
         return "ja"
-    return "en"  
+    return "en"
 
 def translate_issue(issue, target_languages):
     if not issue.body:
@@ -39,7 +39,9 @@ def translate_issue(issue, target_languages):
         return False
 
     original_title = issue.title
-    translated_title = translate_text(original_title, target_languages[0])
+    content_language = detect_language(original_content)
+    target_lang = "ja" if content_language == "en" else "en"
+    translated_title = translate_text(original_title, target_lang)
 
     translations = []
     for language in target_languages:
@@ -67,13 +69,13 @@ def main():
         repo = g.get_repo(REPO_NAME)
         issue = repo.get_issue(number=issue_number)
 
-        original_language = detect_language(issue.body)
+        original_content = get_original_content(issue.body)
+        original_language = detect_language(original_content)
 
-        # Set target languages based on the detected language
         if original_language == "en":
-            target_languages = ["ja"]  
+            target_languages = ["ja"]
         elif original_language == "ja":
-            target_languages = ["en"]  
+            target_languages = ["en"]
 
         if translate_issue(issue, target_languages):
             issue.add_to_labels(TRANSLATED_LABEL)
