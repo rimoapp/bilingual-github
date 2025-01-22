@@ -16,8 +16,7 @@ COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
 ORIGINAL_CONTENT_MARKER = "Original Content:"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",  # Japanese
-    "fr": "Français",  # French
+    "ja": "日本語",  
     "en": "English"  
 }
 
@@ -34,12 +33,9 @@ def detect_language(text):
 
 def get_target_languages(original_language):
     if original_language == "en":
-        return ["ja", "fr"]
+        return ["ja"]
     elif original_language == "ja":
         return ["en"]
-    elif original_language == "fr":
-        return ["en"]
-    return ["en"]  
 
 def format_translations(translations, original_content, original_language):
     formatted_parts = []
@@ -51,7 +47,6 @@ def format_translations(translations, original_content, original_language):
                 f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
     
-    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
     
     return "\n\n".join(formatted_parts)
