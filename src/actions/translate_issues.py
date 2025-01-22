@@ -54,7 +54,7 @@ def translate_issue(issue, target_languages):
 
     original_language_name = LANGUAGE_NAMES.get(content_language, content_language.capitalize())
     if translations:
-        updated_body = "\n\n".join(translations) + f"\n\n<b>{original_language_name}</b>\n\n{original_content}\n"
+        updated_body = "\n\n".join(translations) + f"\n\n<b>{original_language_name}:</b>\n\n{original_content}\n"
         issue.edit(body=updated_body)
         return True
 
