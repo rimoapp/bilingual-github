@@ -58,22 +58,16 @@ def translate_issue(issue, original_content, original_language, target_languages
             translations[language] = translation
 
     # Build the updated issue body
-    original_language_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     updated_body = ""
 
-    for language, translated_title in translated_titles.items():
+    for language in target_languages:
         language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-        updated_body += f"**{translated_title}** ({language_name})\n\n"
+        if language in translated_titles:
+            updated_body += f"**{translated_titles[language]} ({language_name})**\n\n"
+        if language in translations:
+            updated_body += f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translations[language]}\n</details>\n\n"
 
-    for language, translated_body in translations.items():
-        language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-        updated_body += (
-            f"<details>\n<summary><b>{language_name}</b></summary>\n\n"
-            f"{translated_body}\n"
-            f"</details>\n\n"
-        )
-
-    updated_body += f"<h2>Original Content ({original_language_name})</h2>\n\n{original_content}\n\n"
+    updated_body += f"<h2>Original Content (English)</h2>\n\n{original_content}\n\n"
     updated_body += f"{ORIGINAL_LANGUAGE_MARKER}{original_language}-->"
     
     # Update the issue body with the new content
