@@ -39,6 +39,15 @@ def extract_original_language(issue_body):
     return None
 
 def translate_issue(issue, original_content, original_language, target_languages):
+    # Translate the issue title
+    translated_titles = []
+    for language in target_languages:
+        translated_title = translate_text(issue.title, language)
+        if translated_title:
+            language_name = LANGUAGE_NAMES.get(language, language.capitalize())
+            translated_titles.append(f"**{translated_title}** ({language_name})")
+
+    # Translate the issue body
     translations = []
     for language in target_languages:
         translation = translate_text(original_content, language)
@@ -48,10 +57,13 @@ def translate_issue(issue, original_content, original_language, target_languages
                 f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
 
+    # Add original content at the end
     original_language_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     if translations:
         updated_body = (
-            "\n\n".join(translations) +
+            "\n\n".join(translated_titles) +  # Add translated titles at the top
+            "\n\n" +
+            "\n\n".join(translations) +  # Add translations of the issue body
             f"\n\n<h2>Original Content ({original_language_name})</h2>\n\n{original_content}\n\n" +
             f"{ORIGINAL_LANGUAGE_MARKER}{original_language}-->"
         )
