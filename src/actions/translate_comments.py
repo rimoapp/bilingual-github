@@ -33,7 +33,7 @@ def detect_language(text):
 
 def get_target_languages(original_language):
     if original_language == "en":
-        return ["ja", "fr"]
+        return ["ja"]
     elif original_language == "ja":
         return ["en"]
     return ["en"]  
