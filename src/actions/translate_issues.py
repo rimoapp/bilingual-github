@@ -12,72 +12,74 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
 TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
-ORIGINAL_MARKER = "Original Content:"
-ORIGINAL_LANGUAGE_MARKER = "<!-- original_language:"
+ORIGINAL_CONTENT_MARKER = "Original Content:"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",
+    "ja": "日本語",  # Japanese
+    "fr": "Français",  # French
     "en": "English"
 }
 
-def get_original_content(issue_body):
-    """Extract the original content from the issue body."""
-    if ORIGINAL_MARKER in issue_body:
-        parts = issue_body.split(ORIGINAL_MARKER)
+def get_original_content(content):
+    if ORIGINAL_CONTENT_MARKER in content:
+        parts = content.split(ORIGINAL_CONTENT_MARKER)
         return parts[1].strip()
-    return issue_body.strip()
+    return content.strip()
 
 def detect_language(text):
-    """Detect the language of the given text."""
-    if any(ord(char) > 128 for char in text):
+    if any(ord(char) > 128 for char in text):  # Checks for non-ASCII characters (mostly Japanese)
         return "ja"
-    return "en"
+    return "en"  # Default to English if it's not detected as Japanese
 
-def extract_original_language(issue_body):
-    """Extract the original language marker from the issue body."""
-    if ORIGINAL_LANGUAGE_MARKER in issue_body:
-        start = issue_body.find(ORIGINAL_LANGUAGE_MARKER) + len(ORIGINAL_LANGUAGE_MARKER)
-        end = issue_body.find("-->", start)
-        return issue_body[start:end].strip()
-    return None
+def get_target_languages(original_language):
+    if original_language == "en":
+        return ["ja", "fr"]
+    elif original_language == "ja":
+        return ["en"]
+    elif original_language == "fr":
+        return ["en"]
+    return ["en"]  # Default case
 
-def translate_issue(issue, original_content, original_language, target_languages):
-    """Translate the issue title and body and update the issue."""
-    # Translate the issue title
-    translated_titles = {}
+def format_translations(translations, original_content, original_language, issue_title):
+    formatted_parts = []
+    
+    for language, translation in translations.items():
+        if translation and language != original_language:
+            language_name = LANGUAGE_NAMES.get(language, language.capitalize())
+            formatted_parts.append(f"**{translation} ({language_name})**\n\n")
+            formatted_parts.append(
+                f"<details>\n<summary>**{language_name}**</summary>\n\n{translation}\n</details>"
+            )
+    
+    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
+    formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
+    
+    return "\n\n".join(formatted_parts)
+
+def translate_content(content, original_language):
+    translations = {original_language: content}
+    target_languages = get_target_languages(original_language)
+    
     for language in target_languages:
-        translated_title = translate_text(issue.title, language)
-        if translated_title:
-            translated_titles[language] = translated_title
-
-    # Translate the issue body
-    translations = {}
-    for language in target_languages:
-        translation = translate_text(original_content, language)
+        translation = translate_text(content, language)
         if translation:
             translations[language] = translation
-
-    # Build the updated issue body
-    updated_body = ""
-
-    for language in target_languages:
-        language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-        if language in translated_titles:
-            updated_body += f"**{translated_titles[language]} ({language_name})**\n\n"
-        if language in translations:
-            updated_body += f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translations[language]}\n</details>\n\n"
-
-    updated_body += f"<h2>Original Content (English)</h2>\n\n{original_content}\n\n"
-    updated_body += f"{ORIGINAL_LANGUAGE_MARKER}{original_language}-->"
     
-    # Update the issue body with the new content
-    issue.edit(body=updated_body)
+    return translations
 
-    return True
+def translate_issue(issue, original_content, original_language, issue_title):
+    translations = translate_content(original_content, original_language)
+    updated_body = format_translations(translations, original_content, original_language, issue_title)
+    
+    if updated_body != issue.body:
+        issue.edit(body=updated_body)
+        return True
+    
+    return False
 
 def main():
-    """Main function to handle the translation logic."""
     if not all([GITHUB_TOKEN, REPO_NAME, ISSUE_NUMBER]):
+        print("Missing required environment variables")
         return
 
     try:
@@ -86,19 +88,16 @@ def main():
         repo = g.get_repo(REPO_NAME)
         issue = repo.get_issue(number=issue_number)
 
-        # Extract the original content and language
         original_content = get_original_content(issue.body)
-        original_language = extract_original_language(issue.body) or detect_language(original_content)
+        original_language = detect_language(original_content)
 
-        # Set target languages for translation
-        target_languages = ["ja"] if original_language == "en" else ["en"]
-
-        # Perform translation and update issue
-        if translate_issue(issue, original_content, original_language, target_languages):
-            if TRANSLATED_LABEL not in [label.name for label in issue.labels]:
+        if translate_issue(issue, original_content, original_language, issue.title):
+            labels = [label.name for label in issue.labels]
+            if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
-
-    except ValueError:
+    
+    except ValueError as ve:
+        print(f"Invalid number format: {ve}")
         return
     except Exception as e:
         print(f"Error: {e}")
