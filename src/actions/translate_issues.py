@@ -67,12 +67,6 @@ def translate_issue(issue, original_content, original_language, target_languages
         if language in translations:
             updated_body += f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translations[language]}\n</details>\n\n"
 
-    # Check if the original issue content has been updated
-    if original_content != issue.body:
-        updated_body += f"<h2>Updated Original Content (English)</h2>\n\n{original_content}\n\n"
-    else:
-        updated_body += f"<h2>Original Content (English)</h2>\n\n{original_content}\n\n"
-
     updated_body += f"{ORIGINAL_LANGUAGE_MARKER}{original_language}-->"
     
     # Update the issue body with the new content
