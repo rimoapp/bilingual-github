@@ -13,7 +13,7 @@ REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
 TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
-COMMENT_ORIGINAL_MARKER = "**Original Comment:**"
+ORIGINAL_CONTENT_MARKER = "Original Content:"
 
 LANGUAGE_NAMES = {
     "ja": "日本語",  # Japanese
@@ -22,8 +22,8 @@ LANGUAGE_NAMES = {
 }
 
 def get_original_content(content):
-    if COMMENT_ORIGINAL_MARKER in content:
-        parts = content.split(COMMENT_ORIGINAL_MARKER)
+    if ORIGINAL_CONTENT_MARKER in content:
+        parts = content.split(ORIGINAL_CONTENT_MARKER)
         return parts[1].strip()
     return content.strip()
 
@@ -47,25 +47,23 @@ def get_target_languages(original_language):
 
 def format_translations(translations, original_content, original_language):
     """
-    Format translations, showing only relevant languages based on the original language
+    Format translations with translations first, then original content
     """
-    formatted_translations = []
+    formatted_parts = []
     
-    # Add original language section first
-    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
-    formatted_translations.append(
-        f"▼ {original_lang_name}\n{original_content}"
-    )
-    
-    # Add translations in other languages
+    # Add translations in other languages with details/summary tags
     for language, translation in translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            formatted_translations.append(
-                f"▶ {language_name}\n{translation}"
+            formatted_parts.append(
+                f"<details>\n<summary>**{language_name}**</summary>\n\n{translation}\n</details>"
             )
     
-    return "\n\n".join(formatted_translations)
+    # Add original content without details/summary tags
+    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
+    formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
+    
+    return "\n\n".join(formatted_parts)
 
 def translate_content(content, original_language):
     translations = {original_language: content}  # Include original content in translations dict
@@ -78,13 +76,14 @@ def translate_content(content, original_language):
     
     return translations
 
-def should_retranslate(current_content, stored_original):
+def extract_original_content(content):
     """
-    Check if the comment needs to be retranslated
+    Extract the original content from a formatted comment
     """
-    current_content = current_content.strip().replace('\r\n', '\n')
-    stored_original = stored_original.strip().replace('\r\n', '\n')
-    return current_content != stored_original
+    if ORIGINAL_CONTENT_MARKER in content:
+        parts = content.split(ORIGINAL_CONTENT_MARKER)
+        return parts[1].strip()
+    return content.strip()
 
 def translate_comment(comment):
     if not comment.body:
@@ -93,13 +92,8 @@ def translate_comment(comment):
     current_content = comment.body.strip()
     
     # Extract the actual content to translate
-    if "▼" in current_content:  # Check for our language marker
-        # Get the content after the last occurrence of our marker
-        content_parts = current_content.split("▼")
-        original_content = content_parts[-1].split("\n", 1)[1].strip()
-    else:
-        original_content = current_content
-
+    original_content = extract_original_content(current_content)
+    
     # Detect language and translate
     original_language = detect_language(original_content)
     translations = translate_content(original_content, original_language)
