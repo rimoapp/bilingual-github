@@ -18,7 +18,6 @@ ORIGINAL_MARKER = "Original Content:"
 
 LANGUAGE_NAMES = {
     "ja": "日本語",
-    "fr": "Français",
     "en": "English"
 }
 
@@ -71,9 +70,8 @@ def main():
 
         original_language = detect_language(issue.body)
 
-        # Set target languages based on the detected language
         if original_language == "en":
-            target_languages = ["ja", "fr"]
+            target_languages = ["ja"]
         elif original_language == "ja":
             target_languages = ["en"]
         else:
