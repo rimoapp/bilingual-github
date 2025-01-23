@@ -14,6 +14,7 @@ TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 ORIGINAL_MARKER = "Original Content:"
 ORIGINAL_LANGUAGE_MARKER = "<!-- original_language:"
+EDIT_MARKER = "<!-- last_processed_content:"
 
 LANGUAGE_NAMES = {
     "ja": "日本語",
@@ -38,30 +39,42 @@ def extract_original_language(issue_body):
         return issue_body[start:end].strip()
     return None
 
-def update_translations(original_content, original_language, issue_body, target_languages):
-    new_translations = []
-    existing_translations = issue_body.split(ORIGINAL_MARKER)[0]
+def extract_last_processed_content(issue_body):
+    if EDIT_MARKER in issue_body:
+        start = issue_body.find(EDIT_MARKER) + len(EDIT_MARKER)
+        end = issue_body.find("-->", start)
+        return issue_body[start:end].strip()
+    return ""
 
+def update_translations(original_content, original_language, issue_body, target_languages, last_processed_content):
+    new_content = original_content[len(last_processed_content):].strip()
+    if not new_content:
+        return "", last_processed_content
+
+    new_translations = []
     for language in target_languages:
-        if f"<summary><b>{LANGUAGE_NAMES.get(language, language.capitalize())}</b></summary>" in existing_translations:
-            continue  # Skip if already translated
-        translation = translate_text(original_content, language)
+        translation = translate_text(new_content, language)
         if translation:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             new_translations.append(
                 f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
 
-    return "\n".join(new_translations)
+    updated_last_processed_content = original_content
+    return "\n".join(new_translations), updated_last_processed_content
 
-def translate_issue(issue, original_content, original_language, target_languages):
-    new_translations = update_translations(original_content, original_language, issue.body, target_languages)
+def translate_issue(issue, original_content, original_language, issue_body, target_languages, last_processed_content):
+    new_translations, updated_last_processed_content = update_translations(
+        original_content, original_language, issue_body, target_languages, last_processed_content
+    )
 
     if new_translations:
         updated_body = (
-            f"{new_translations}\n\n"
+            issue_body.split(ORIGINAL_MARKER)[0] +  # Preserve existing translations
+            f"\n\n{new_translations}\n\n"
             f"<details>\n<summary><b>{LANGUAGE_NAMES.get(original_language, original_language.capitalize())}</b></summary>\n\n{original_content}\n</details>\n\n"
-            f"{ORIGINAL_LANGUAGE_MARKER}{original_language}-->"
+            f"{ORIGINAL_LANGUAGE_MARKER}{original_language}-->\n"
+            f"{EDIT_MARKER}{updated_last_processed_content}-->"
         )
         issue.edit(body=updated_body)
         return True
@@ -80,10 +93,11 @@ def main():
 
         original_language = extract_original_language(issue.body) or detect_language(issue.body)
         original_content = get_original_content(issue.body)
+        last_processed_content = extract_last_processed_content(issue.body)
 
         target_languages = ["ja"] if original_language == "en" else ["en"]
 
-        if translate_issue(issue, original_content, original_language, target_languages):
+        if translate_issue(issue, original_content, original_language, issue.body, target_languages, last_processed_content):
             if TRANSLATED_LABEL not in [label.name for label in issue.labels]:
                 issue.add_to_labels(TRANSLATED_LABEL)
 
