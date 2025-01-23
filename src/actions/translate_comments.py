@@ -13,48 +13,62 @@ REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
 TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
-ORIGINAL_CONTENT_MARKER = "Original Content:"
+COMMENT_ORIGINAL_MARKER = "**Original Comment:**"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",  
+    "ja": "日本語",  # Japanese
+    "fr": "Français",  # French
     "en": "English"  
 }
 
 def get_original_content(content):
-    if ORIGINAL_CONTENT_MARKER in content:
-        parts = content.split(ORIGINAL_CONTENT_MARKER)
+    if COMMENT_ORIGINAL_MARKER in content:
+        parts = content.split(COMMENT_ORIGINAL_MARKER)
         return parts[1].strip()
     return content.strip()
 
 def detect_language(text):
-    if any(ord(char) > 128 for char in text):  
+    # Basic language detection (English vs Japanese for simplicity)
+    if any(ord(char) > 128 for char in text):  # Checks for non-ASCII characters (mostly Japanese)
         return "ja"
-    return "en"  
+    return "en"  # Default to English if it's not detected as Japanese
 
 def get_target_languages(original_language):
+    """
+    Determine which languages to translate to based on the original language
+    """
     if original_language == "en":
-        return ["ja"]
+        return ["ja", "fr"]
     elif original_language == "ja":
         return ["en"]
-    return ["en"]  
+    elif original_language == "fr":
+        return ["en"]
+    return ["en"]  # Default case
 
 def format_translations(translations, original_content, original_language):
-    formatted_parts = []
+    """
+    Format translations, showing only relevant languages based on the original language
+    """
+    formatted_translations = []
     
+    # Add original language section first
+    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
+    formatted_translations.append(
+        f"▼ {original_lang_name}\n{original_content}"
+    )
+    
+    # Add translations in other languages
     for language, translation in translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            formatted_parts.append(
-                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
+            formatted_translations.append(
+                f"▶ {language_name}\n{translation}"
             )
     
-    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
-    formatted_parts.append(f"<b>{original_lang_name}</b>\n{original_content}")
-    
-    return "\n\n".join(formatted_parts)
+    return "\n\n".join(formatted_translations)
 
 def translate_content(content, original_language):
-    translations = {original_language: content} 
+    translations = {original_language: content}  # Include original content in translations dict
     target_languages = get_target_languages(original_language)
     
     for language in target_languages:
@@ -64,11 +78,13 @@ def translate_content(content, original_language):
     
     return translations
 
-def extract_original_content(content):
-    if ORIGINAL_CONTENT_MARKER in content:
-        parts = content.split(ORIGINAL_CONTENT_MARKER)
-        return parts[1].strip()
-    return content.strip()
+def should_retranslate(current_content, stored_original):
+    """
+    Check if the comment needs to be retranslated
+    """
+    current_content = current_content.strip().replace('\r\n', '\n')
+    stored_original = stored_original.strip().replace('\r\n', '\n')
+    return current_content != stored_original
 
 def translate_comment(comment):
     if not comment.body:
@@ -76,8 +92,15 @@ def translate_comment(comment):
         
     current_content = comment.body.strip()
     
-    original_content = extract_original_content(current_content)
-    
+    # Extract the actual content to translate
+    if "▼" in current_content:  # Check for our language marker
+        # Get the content after the last occurrence of our marker
+        content_parts = current_content.split("▼")
+        original_content = content_parts[-1].split("\n", 1)[1].strip()
+    else:
+        original_content = current_content
+
+    # Detect language and translate
     original_language = detect_language(original_content)
     translations = translate_content(original_content, original_language)
     
@@ -104,6 +127,7 @@ def main():
         comment = issue.get_comment(comment_id)
 
         if translate_comment(comment):
+            # Only add the translated label if it's not already present
             labels = [label.name for label in issue.labels]
             if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
