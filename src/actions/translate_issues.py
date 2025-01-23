@@ -13,6 +13,7 @@ REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
 TRANSLATED_LABEL = "translated"
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 ORIGINAL_MARKER = "Original Content:"
+ORIGINAL_LANGUAGE_MARKER = "<!-- original_language:"
 
 LANGUAGE_NAMES = {
     "ja": "日本語",
@@ -22,7 +23,7 @@ LANGUAGE_NAMES = {
 def get_original_content(issue_body):
     if ORIGINAL_MARKER in issue_body:
         parts = issue_body.split(ORIGINAL_MARKER)
-        return parts[1].strip()
+        return parts[1].split(ORIGINAL_LANGUAGE_MARKER)[0].strip()
     return issue_body.strip()
 
 def detect_language(text):
@@ -30,31 +31,38 @@ def detect_language(text):
         return "ja"
     return "en"
 
-def translate_issue(issue, target_languages):
-    if not issue.body:
-        return False
+def extract_original_language(issue_body):
+    if ORIGINAL_LANGUAGE_MARKER in issue_body:
+        start = issue_body.find(ORIGINAL_LANGUAGE_MARKER) + len(ORIGINAL_LANGUAGE_MARKER)
+        end = issue_body.find("-->", start)
+        return issue_body[start:end].strip()
+    return None
 
-    original_content = get_original_content(issue.body)
-    if not original_content:
-        return False
+def update_translations(original_content, original_language, issue_body, target_languages):
+    new_translations = []
+    existing_translations = issue_body.split(ORIGINAL_MARKER)[0]
 
-    original_title = issue.title
-    content_language = detect_language(original_content)
-    target_lang = "ja" if content_language == "en" else "en"
-    translated_title = translate_text(original_title, target_lang)
-
-    translations = []
     for language in target_languages:
+        if f"<summary><b>{LANGUAGE_NAMES.get(language, language.capitalize())}</b></summary>" in existing_translations:
+            continue  # Skip if already translated
         translation = translate_text(original_content, language)
         if translation:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            translations.append(
-                f"\n<h2>{translated_title}</h2>\n\n<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
+            new_translations.append(
+                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
             )
 
-    original_language_name = LANGUAGE_NAMES.get(content_language, content_language.capitalize())
-    if translations:
-        updated_body = "\n\n".join(translations) + f"\n\n<details>\n<summary><b>{original_language_name}</b></summary>\n\n{original_content}\n</details>"
+    return "\n".join(new_translations)
+
+def translate_issue(issue, original_content, original_language, target_languages):
+    new_translations = update_translations(original_content, original_language, issue.body, target_languages)
+
+    if new_translations:
+        updated_body = (
+            f"{new_translations}\n\n"
+            f"<details>\n<summary><b>{LANGUAGE_NAMES.get(original_language, original_language.capitalize())}</b></summary>\n\n{original_content}\n</details>\n\n"
+            f"{ORIGINAL_LANGUAGE_MARKER}{original_language}-->"
+        )
         issue.edit(body=updated_body)
         return True
 
@@ -70,16 +78,14 @@ def main():
         repo = g.get_repo(REPO_NAME)
         issue = repo.get_issue(number=issue_number)
 
+        original_language = extract_original_language(issue.body) or detect_language(issue.body)
         original_content = get_original_content(issue.body)
-        original_language = detect_language(original_content)
 
-        if original_language == "en":
-            target_languages = ["ja"]
-        elif original_language == "ja":
-            target_languages = ["en"]
+        target_languages = ["ja"] if original_language == "en" else ["en"]
 
-        if translate_issue(issue, target_languages):
-            issue.add_to_labels(TRANSLATED_LABEL)
+        if translate_issue(issue, original_content, original_language, target_languages):
+            if TRANSLATED_LABEL not in [label.name for label in issue.labels]:
+                issue.add_to_labels(TRANSLATED_LABEL)
 
     except ValueError:
         return
