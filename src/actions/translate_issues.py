@@ -46,7 +46,7 @@ def format_translations(translations, original_content, original_language, issue
     for language, translation in translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            formatted_parts.append(f"**{translation} ({language_name})**\n\n")
+            formatted_parts.append(f"**{issue_title} ({language_name})**\n\n")
             formatted_parts.append(
                 f"<details>\n<summary>**{language_name}**</summary>\n\n{translation}\n</details>"
             )
