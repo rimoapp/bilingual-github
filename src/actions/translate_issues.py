@@ -42,7 +42,7 @@ def get_target_languages(original_language):
 
 def format_translations(translations, original_content, original_language, issue_title):
     formatted_parts = []
-    
+
     for language, translation in translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
@@ -50,31 +50,31 @@ def format_translations(translations, original_content, original_language, issue
             formatted_parts.append(
                 f"<details>\n<summary>**{language_name}**</summary>\n\n{translation}\n</details>"
             )
-    
+
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
-    
+
     return "\n\n".join(formatted_parts)
 
 def translate_content(content, original_language):
     translations = {original_language: content}
     target_languages = get_target_languages(original_language)
-    
+
     for language in target_languages:
         translation = translate_text(content, language)
         if translation:
             translations[language] = translation
-    
+
     return translations
 
 def translate_issue(issue, original_content, original_language, issue_title):
     translations = translate_content(original_content, original_language)
     updated_body = format_translations(translations, original_content, original_language, issue_title)
-    
+
     if updated_body != issue.body:
         issue.edit(body=updated_body)
         return True
-    
+
     return False
 
 def main():
@@ -95,7 +95,7 @@ def main():
             labels = [label.name for label in issue.labels]
             if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
-    
+
     except ValueError as ve:
         print(f"Invalid number format: {ve}")
         return
