@@ -37,14 +37,17 @@ def get_target_languages(original_language):
         return ["en"]
     return ["en"]  # Default case
 
-def format_translations(translations, original_content, original_language, issue_title, issue_body):
+def format_translations(title_translations, body_translations, original_content, original_language):
     formatted_parts = []
 
-    for language, translation in translations.items():
+    for language, translation in title_translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             formatted_parts.append(f"**{translation} ({language_name})**")
-            formatted_parts.append(issue_body)
+
+    for language, translation in body_translations.items():
+        if translation and language != original_language:
+            formatted_parts.append(translation)
 
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
@@ -65,7 +68,7 @@ def translate_content(content, original_language):
 def translate_issue(issue, original_content, original_language, issue_title, issue_body):
     title_translations = translate_content(issue_title, original_language)
     body_translations = translate_content(issue_body, original_language)
-    updated_body = format_translations(title_translations, original_content, original_language, issue_title, issue_body)
+    updated_body = format_translations(title_translations, body_translations, original_content, original_language)
 
     if updated_body != issue.body:
         issue.edit(body=updated_body)
