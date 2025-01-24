@@ -43,8 +43,8 @@ def format_translations(translations, original_content, original_language, issue
     for language, translation in translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            formatted_parts.append(f"**{issue_title} ({language_name})**")
-            formatted_parts.append(translation)
+            formatted_parts.append(f"**{translation} ({language_name})**")
+            formatted_parts.append(issue_body)
 
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
@@ -63,9 +63,9 @@ def translate_content(content, original_language):
     return translations
 
 def translate_issue(issue, original_content, original_language, issue_title, issue_body):
-    translations = translate_content(original_content, original_language)
-    translations = translate_content(issue_body, original_language)
-    updated_body = format_translations(translations, original_content, original_language, issue_title, issue_body)
+    title_translations = translate_content(issue_title, original_language)
+    body_translations = translate_content(issue_body, original_language)
+    updated_body = format_translations(title_translations, original_content, original_language, issue_title, issue_body)
 
     if updated_body != issue.body:
         issue.edit(body=updated_body)
@@ -88,20 +88,6 @@ def main():
         original_language = detect_language(original_content)
         issue_title = issue.title
         issue_body = get_original_content(issue.body)
-
-        if original_language == "ja":
-            issue_title_translated = translate_text(issue_title, "en")
-            issue_body_translated = translate_text(issue_body, "en")
-            updated_body = f"**{issue_title_translated}**\n\n{issue_body_translated}\n\n{ORIGINAL_CONTENT_MARKER}\n{original_content}"
-        elif original_language == "en":
-            issue_title_translated = translate_text(issue_title, "ja")
-            issue_body_translated = translate_text(issue_body, "ja")
-            updated_body = f"**{issue_title_translated}**\n\n{issue_body_translated}\n\n{ORIGINAL_CONTENT_MARKER}\n{original_content}"
-        else:
-            updated_body = issue.body
-
-        if updated_body != issue.body:
-            issue.edit(body=updated_body)
 
         if translate_issue(issue, original_content, original_language, issue_title, issue_body):
             labels = [label.name for label in issue.labels]
