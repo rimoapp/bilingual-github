@@ -47,10 +47,10 @@ def format_translations(title_translations, body_translations, original_content,
 
     for language, translation in body_translations.items():
         if translation and language != original_language:
-            formatted_parts.append(f"\n\n<details>\n<summary>{language_name}</summary>\n\n{translation}</details>")
+            formatted_parts.append(f"\n\n<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}</details>")
 
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
-    formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
+    formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b>\n{original_content}")
 
     return "\n\n".join(formatted_parts)
 
