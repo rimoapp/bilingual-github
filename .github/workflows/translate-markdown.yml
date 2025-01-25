@@ -43,6 +43,15 @@ jobs:
 
       - name: Commit Translations
         run: |
-          git add **/*.{ja,fr}.md
-          git diff --staged --quiet || git commit -m "Update markdown translations [skip ci]"
-          git push
+          # Find generated translation files
+          translated_files=$(find . -name "*.ja.md" -o -name "*.fr.md")
+            
+          if [ -n "$translated_files" ]; then
+            echo "Found translated files:"
+            echo "$translated_files"
+            git add $translated_files
+            git commit -m "Update markdown translations [skip ci]"
+            git push
+          else
+            echo "No translation files found"
+          fi
