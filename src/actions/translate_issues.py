@@ -15,7 +15,7 @@ ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 ORIGINAL_CONTENT_MARKER = "Original Content:"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",  # Japanese
+    "ja": "日本語",  
     "en": "English"
 }
 
@@ -26,16 +26,16 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    if any(ord(char) > 128 for char in text):  # Checks for non-ASCII characters (mostly Japanese)
+    if any(ord(char) > 128 for char in text):  
         return "ja"
-    return "en"  # Default to English if it's not detected as Japanese
+    return "en"  
 
 def get_target_languages(original_language):
     if original_language == "en":
         return ["ja"]
     elif original_language == "ja":
         return ["en"]
-    return ["en"]  # Default case
+    return ["en"]  
 
 def format_translations(title_translations, body_translations, original_content, original_language):
     formatted_parts = []
@@ -47,7 +47,7 @@ def format_translations(title_translations, body_translations, original_content,
 
     for language, translation in body_translations.items():
         if translation and language != original_language:
-            formatted_parts.append(f"\n\n<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}</details>")
+            formatted_parts.append(f"\n\n<details>\n<summary>{language_name}</summary>\n\n{translation}</details>")
 
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     formatted_parts.append(f"{ORIGINAL_CONTENT_MARKER}\n{original_content}")
