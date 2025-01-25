@@ -1,35 +1,87 @@
 ﻿# Bilingual-GitHub 
-Bilingual-GitHub is a Python-based tool designed to automatically translate GitHub issues into multiple languages. This tool integrates with GitHub’s API and leverages translation models to add translated content to issues.
 
-## Features
-- Automatic Translation: Translates the body of open GitHub issues and markdown files into multiple languages.
-- Support for Multiple Languages: Currently supports Japanese and French, but can be easily extended to support additional languages.
+## Overview
+The bilingual-github repository provides reusable GitHub Actions workflows for translating GitHub issues and comments.
+This documentation explains how to use the workflows for:
+- Translating GitHub Issues
+- Translating GitHub Comments
 
-## Installation
-1. Clone the repository:
-```
-git clone <repository-url>
-cd bilingual-github
-```
-2. Install dependencies:
-```
-pip install -r requirements.txt
-```
-3. Initialize the tool in your repository:
-```
-python src/hooks/install_hooks.py
-```
+## Steps to Use the Reusable Workflows in a Target Repository
 
-## Usage
-### Git Hooks for Markdown Files
-1. Ensure git hooks are installed by running:
+### 1. Translate GitHub Issues
+To use the workflow for translating issues, create the following file in the target repository:
 ```
-python src/hooks/install_hooks.py
+.github/workflows/translate_issues.yml
 ```
-2. After committing changes to a Markdown file (*.md), the post-commit hook automatically translates it into the target languages.
-3. Check the translated files (*.language_code.md) in your repository.
+### Code for the Calling Workflow (Translate Issues)
+```
+name: Translate GitHub Issues
 
-### GitHub Issues Translation
+on:
+  issues:
+    types:
+      - opened
+      - edited
+
+jobs:
+  call-translate-issues:
+    uses: rimoapp/bilingual-github/.github/workflows/translate-issues.yml@main
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    with:
+      issue_number: ${{ github.event.issue.number }}
 ```
-python src/actions/translate_issues.py
+### 2. Translate GitHub Comments
+To use the workflow for translating comments, create the following file in the target repository:
 ```
+.github/workflows/translate_Comments.yml
+```
+### Code for the Calling Workflow (Translate Comments)
+```
+name: Translate Issue Comments
+
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+jobs:
+  call-translate-comments:
+    uses: rimoapp/bilingual-github/.github/workflows/translate-comments.yml@main
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    with:
+      issue_number: ${{ github.event.issue.number }}
+      comment_id: ${{ github.event.comment.id }}
+```    
+## Steps to Configure the Target Repository
+
+### 1. Add Secrets
+- Navigate to target repository's settings on GitHub.
+- Under **Security > Secrets and variables > Actions**, add the following
+  secret:
+    - **OPENAI_API_KEY:** Your OpenAI API key for translations.
+
+### 2. Enable the Workflows
+Ensure that GitHub Actions are enabled for the repository. The workflows will trigger on the following events:
+- **Translate Issues:**
+   - When an issue is created or edited.
+- **Translate Comments:**
+   - When a comment is added or edited.
+
+## Testing the Integration
+
+### 1. Translate Issues
+- Open or edit an issue in the target repository.
+- The ```call-translate-issues``` job will trigger and translate the issue.
+
+### 2. Translate Comments
+- Add or edit a comment in an issue in the target repository.
+- The ```call-translate-comments``` job will trigger and translate the comment.
+
+### 3. Monitor the Workflow
+- Go to the **Actions** tab in the target repository.
+- Check the status of the ```Translate GitHub Issues``` and ```Translate Issue Comments``` workflows.
+- If successful, the translated content will appear in the issue or 
+  comment.
