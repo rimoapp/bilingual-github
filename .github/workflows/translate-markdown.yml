@@ -2,11 +2,6 @@ name: Translate Markdown Files
 
 on:
   workflow_call:
-    inputs:
-      target_repo:
-        required: true
-        type: string
-        description: "rimoapp/bilingual-testing"
     secrets:
       OPENAI_API_KEY:
         required: true
@@ -18,24 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
-      - name: Checkout Translation Tools
+      - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 2 
-          repository: rimoapp/bilingual-github  
+          repository: rimoapp/bilingual-github
           token: ${{ secrets.PAT }}
 
-      - name: Checkout Target Repository
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ inputs.target_repo }}
-          path: rimoapp/bilingual-testing 
-          token: ${{ secrets.PAT }}
-
-      - name: Set Up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.8'
 
@@ -45,48 +31,18 @@ jobs:
           pip install -r requirements.txt
 
       - name: Configure Git
-        working-directory: rimoapp/bilingual-testing 
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: List Files Before Translation
-        working-directory: rimoapp/bilingual-testing 
-        run: |
-          echo "Current directory contents:"
-          ls -la
-          echo "Git status before translation:"
-          git status
-
-      - name: Copy README to Process
-        run: |
-          cp bilingual-testing/README.md bilingual-github/README.md || echo "No README.md found"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Translate Markdown Files
-        run: |
-          python src/hooks/post_commit.py
-          echo "Git status after translation script:"
-          git status
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - name: Copy Translations Back
         run: |
-          cp bilingual-github/README.*.md rimoapp/bilingual-testing / || echo "No translations generated"
+          python src/hooks/post_commit.py
 
-      - name: Commit and Push Changes
-        working-directory: target-repo
+      - name: Commit Translations
         run: |
-          changes=$(git status --porcelain)
-          if [[ -n "$changes" ]]; then
-            echo "Changes detected:"
-            echo "$changes"
-            git add .
-            git commit -m "Add translated markdown files [skip ci]"
-            git push
-          else
-            echo "No changes detected in git status:"
-            git status
-            echo "Directory contents:"
-            ls -la
-          fi
+          git add *.{ja,fr}.md
+          git diff --staged --quiet || git commit -m "Update markdown translations [skip ci]"
+          git push
