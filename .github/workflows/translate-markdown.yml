@@ -51,7 +51,7 @@ jobs:
       - name: Commit and Push Translations
         working-directory: target-repo
         run: |
-          translated_files=$(find . -name "*.fr.md" -o -name "*.ja.md")
+          translated_files=$(find . -name "*.ja.md")
           
           if [ -n "$translated_files" ]; then
             echo "Translation files generated:"

@@ -9,7 +9,7 @@ sys.path.insert(0, src_dir)
 
 from utils.translation import translate_text
 
-TARGET_LANGUAGES = ["ja", "fr"]
+TARGET_LANGUAGES = ["ja"]
 
 def read_file(file_path):
     try:
