@@ -79,17 +79,11 @@ def translate_issue(issue, original_content, original_language, issue_title, iss
     return False
 
 def should_translate(issue):
-    """
-    Check if the issue should be translated based on its labels and current state
-    """
     labels = [label.name.lower() for label in issue.labels]
     
-    # If the issue has the needs translation label, always translate
     if NEEDS_TRANSLATION_LABEL.lower() in labels:
         return True
     
-    # If the issue was previously translated (has translated label) 
-    # and still has needs translation label, translate again
     if TRANSLATED_LABEL.lower() in labels and NEEDS_TRANSLATION_LABEL.lower() in labels:
         return True
         
@@ -106,7 +100,6 @@ def main():
         repo = g.get_repo(REPO_NAME)
         issue = repo.get_issue(number=issue_number)
         
-        # Check if the issue should be translated
         if not should_translate(issue):
             print(f"Issue #{issue_number} does not require translation at this time.")
             return
@@ -118,11 +111,8 @@ def main():
         
         if translate_issue(issue, original_content, original_language, issue_title, issue_body):
             labels = [label.name.lower() for label in issue.labels]
-            # Add translated label if not present
             if TRANSLATED_LABEL.lower() not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
-            # Note: We no longer remove the 'need translation' label
-            # This allows for future edits to be translated
     
     except ValueError as ve:
         print(f"Invalid number format: {ve}")
