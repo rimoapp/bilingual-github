@@ -6,6 +6,16 @@ This documentation explains how to use the workflows for:
 - Translating GitHub Issues
 - Translating GitHub Comments
 
+## Translation Behavior
+- Translation only occurs when an issue has the "**need translation**" label
+- When the label is present:
+  - The issue content will be translated
+  - All comments on that issue will be translated
+  - Any edits to the issue or its comments will trigger new translations
+- If an issue doesn't have the **"need translation"** label:
+  - No translation will occur for the issue or its comments
+  - The translation workflows will skip processing
+
 ## Steps to Use the Reusable Workflows in a Target Repository
 
 #### 1. Translate GitHub Issues
@@ -70,10 +80,16 @@ Ensure that GitHub Actions are enabled for the repository. The workflows will tr
 - **Translate Comments:**
   - When a comment is added or edited.
 
+#### 3. Create the Required Label
+- Go to your repository's **Issues > Labels**
+- Create a new label named **"need translation"**
+- This label will be used to control which issues get translated
+  
 ## Testing the Integration
 
 #### 1. Translate Issues
 - Open or edit an issue in the target repository.
+- Add the "need translation" label to the issue
 - The ```call-translate-issues``` job will trigger and translate the issue.
 
 #### 2. Translate Comments
