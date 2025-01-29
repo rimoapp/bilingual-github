@@ -11,13 +11,14 @@ from utils.translation import translate_text
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
 REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
 TRANSLATED_LABEL = "translated"
+NEEDS_TRANSLATION_LABEL = "need translation"  
 ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "").strip()
 COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
 ORIGINAL_CONTENT_MARKER = "Original Content:"
 
 LANGUAGE_NAMES = {
-    "ja": "日本語",  
-    "en": "English"  
+    "ja": "日本語",
+    "en": "English"
 }
 
 def get_original_content(content):
@@ -27,16 +28,16 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    if any(ord(char) > 128 for char in text):  
+    if any(ord(char) > 128 for char in text):
         return "ja"
-    return "en"  
+    return "en"
 
 def get_target_languages(original_language):
     if original_language == "en":
         return ["ja"]
     elif original_language == "ja":
         return ["en"]
-    return ["en"]  
+    return ["en"]
 
 def format_translations(translations, original_content, original_language):
     formatted_parts = []
@@ -54,7 +55,8 @@ def format_translations(translations, original_content, original_language):
     return "\n\n".join(formatted_parts)
 
 def translate_content(content, original_language):
-    translations = {original_language: content}  
+    translations = {original_language: content}
+    
     target_languages = get_target_languages(original_language)
     
     for language in target_languages:
@@ -69,6 +71,9 @@ def extract_original_content(content):
         parts = content.split(ORIGINAL_CONTENT_MARKER)
         return parts[1].strip()
     return content.strip()
+
+def should_translate_issue(issue):
+    return any(label.name.lower() == NEEDS_TRANSLATION_LABEL.lower() for label in issue.labels)
 
 def translate_comment(comment):
     if not comment.body:
@@ -93,7 +98,7 @@ def main():
     if not all([GITHUB_TOKEN, REPO_NAME, ISSUE_NUMBER, COMMENT_ID]):
         print("Missing required environment variables")
         return
-
+    
     try:
         issue_number = int(ISSUE_NUMBER)
         comment_id = int(COMMENT_ID)
@@ -101,13 +106,18 @@ def main():
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(REPO_NAME)
         issue = repo.get_issue(number=issue_number)
+        
+        if not should_translate_issue(issue):
+            print(f"Issue #{issue_number} does not have the '{NEEDS_TRANSLATION_LABEL}' label. Skipping comment translation.")
+            return
+            
         comment = issue.get_comment(comment_id)
-
+        
         if translate_comment(comment):
             labels = [label.name for label in issue.labels]
             if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
-        
+    
     except ValueError as ve:
         print(f"Invalid number format: {ve}")
         return
