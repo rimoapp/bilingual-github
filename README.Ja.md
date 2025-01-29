@@ -5,9 +5,17 @@ bilingual-github リポジトリは、GitHubのIssueやコメントを翻訳す�
 - GitHubのIssueの翻訳
 - GitHubのコメントの翻訳
 
-## 対象リポジトリで再利用可能なワークフローを使用する手順
+## 翻訳の動作
+- Issue に **「need translation」** ラベルが付いている場合のみ翻訳が実行されます。
+- ラベルが付いている場合：
+  - Issue の内容が翻訳される
+  - その Issue 内のすべてのコメントが翻訳される
+  - Issue やコメントが編集されると、新しい翻訳が実行される
+- **「need translation」** ラベルがない場合:
+  - Issue やコメントは翻訳されない
+  - 翻訳ワークフローは処理をスキップする
 
-## Steps to Use the Reusable Workflows in a Target Repository
+## 対象リポジトリで再利用可能なワークフローを使用する手順
 
 #### 1. GitHubのIssueを翻訳
 
@@ -56,7 +64,8 @@ jobs:
     with:
       issue_number: ${{ github.event.issue.number }}
       comment_id: ${{ github.event.comment.id }}
-```    
+```
+    
 ## 対象リポジトリを設定する手順
 
 #### 1. シークレットを追加
@@ -75,6 +84,7 @@ jobs:
 
 #### 1. Issueの翻訳
 - 対象リポジトリでIssueを作成または編集します。
+- 「need translation」 というラベルを作成します。
 - ```call-translate-issues``` ジョブがトリガーされ、Issueが翻訳されます。
 
 #### 2. コメントの翻訳
