@@ -21,7 +21,7 @@ This documentation explains how to use the workflows for:
 #### 1. Translate GitHub Issues
 To use the workflow for translating issues, create the following file in the target repository:
 ```bash
-.github/workflows/translate_issues.yml
+.github/workflows/translate-issues.yml
 ```
 #### Code for the Calling Workflow (Translate Issues)
 ```python
@@ -30,11 +30,14 @@ name: Translate GitHub Issues
 on:
   issues:
     types:
-      - opened
+      - labeled
       - edited
 
 jobs:
   call-translate-issues:
+    if: |
+      github.event.label.name == 'need translation' ||
+      (github.event.action == 'edited' && contains(github.event.issue.labels.*.name, 'need translation'))
     uses: rimoapp/bilingual-github/.github/workflows/translate-issues.yml@main
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -44,7 +47,7 @@ jobs:
 #### 2. Translate GitHub Comments
 To use the workflow for translating comments, create the following file in the target repository:
 ```base
-.github/workflows/translate_comments.yml
+.github/workflows/translate-comments.yml
 ```
 #### Code for the Calling Workflow (Translate Comments)
 ```python
@@ -55,16 +58,43 @@ on:
     types:
       - created
       - edited
+  issues:
+    types:
+      - labeled
 
 jobs:
   call-translate-comments:
+    if: |
+      (github.event_name == 'issues' && github.event.label.name == 'need translation') ||
+      github.event_name == 'issue_comment'
     uses: rimoapp/bilingual-github/.github/workflows/translate-comments.yml@main
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     with:
       issue_number: ${{ github.event.issue.number }}
-      comment_id: ${{ github.event.comment.id }}
-```    
+      comment_id: ${{ github.event.comment.id || '' }}
+```
+#### 3. Translate .md files
+```base
+.github/workflows/translate-markdown.yml
+```
+```python
+name: Translate Markdown Files
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+    branches:
+      - main
+
+jobs:
+  call-translate-markdown:
+    uses: rimoapp/bilingual-github/.github/workflows/translate-markdown.yml@main
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
 ## Steps to Configure the Target Repository
 
 #### 1. Add Secrets
