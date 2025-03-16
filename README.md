@@ -80,19 +80,61 @@ jobs:
 ```
 ```python
 name: Translate Markdown Files
-
 on:
   push:
     paths:
       - '**/*.md'
+      - '.github/workflows/translate-markdown.yml'
     branches:
       - main
 
 jobs:
-  call-translate-markdown:
+  check-for-workflow-file:
+    runs-on: ubuntu-latest
+    outputs:
+      workflow_added: ${{ steps.check_workflow.outputs.was_added }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      
+      - name: Check if workflow file was just added
+        id: check_workflow
+        run: |
+          # Check if the workflow file exists in the previous commit
+          git checkout HEAD~1
+          if [ ! -f .github/workflows/translate-markdown.yml ]; then
+            echo "was_added=true" >> $GITHUB_OUTPUT
+          else
+            echo "was_added=false" >> $GITHUB_OUTPUT
+          fi
+          git checkout HEAD
+
+  process-existing-files:
+    needs: check-for-workflow-file
+    if: needs.check-for-workflow-file.outputs.workflow_added == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Find and touch all Markdown files
+        run: |
+          find . -name "*.md" -not -name "*.ja.md" -exec touch {} \;
+          
+      - name: Commit touched files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git commit -m "Trigger initial translation for all Markdown files [skip ci]" || echo "No files to commit"
+          git push || echo "Nothing to push"
+
+  translate-markdown:
+    needs: [check-for-workflow-file, process-existing-files]
+    if: always() && (needs.check-for-workflow-file.outputs.workflow_added == 'false' || needs.process-existing-files.result == 'success' || needs.process-existing-files.result == 'skipped')
     uses: rimoapp/bilingual-github/.github/workflows/translate-markdown.yml@main
     secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}   
 ```
 
 ## Steps to Configure the Target Repository
