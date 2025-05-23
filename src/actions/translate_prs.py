@@ -29,7 +29,16 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    if any(ord(char) > 128 for char in text):
+    # Count Japanese characters (Hiragana, Katakana, Kanji)
+    jp_chars = sum(1 for char in text if '\u3040' <= char <= '\u309F' or  # Hiragana
+                                  '\u30A0' <= char <= '\u30FF' or  # Katakana
+                                  '\u4E00' <= char <= '\u9FFF')    # Kanji
+    
+    # Count English characters (basic Latin)
+    en_chars = sum(1 for char in text if '\u0041' <= char <= '\u007A')  # Basic Latin
+    
+    # If there are more Japanese characters than English, it's Japanese
+    if jp_chars > en_chars:
         return "ja"
     return "en"
 
