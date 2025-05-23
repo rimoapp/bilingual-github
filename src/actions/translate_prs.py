@@ -1,0 +1,154 @@
+import sys
+import os
+from github import Github
+
+script_dir = os.path.dirname(__file__)
+src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
+sys.path.append(src_dir)
+
+from utils.translation import translate_text
+
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
+REPO_NAME = os.getenv("GITHUB_REPOSITORY", "").strip()
+TRANSLATED_LABEL = "translated"
+NEEDS_TRANSLATION_LABEL = "need translation"
+PR_NUMBER = os.getenv("PR_NUMBER", "").strip()
+COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
+ORIGINAL_CONTENT_MARKER = "Original Content:"
+
+LANGUAGE_NAMES = {
+    "ja": "日本語",
+    "en": "English"
+}
+
+def get_original_content(content):
+    if ORIGINAL_CONTENT_MARKER in content:
+        parts = content.split(ORIGINAL_CONTENT_MARKER)
+        return parts[1].strip()
+    return content.strip()
+
+def detect_language(text):
+    if any(ord(char) > 128 for char in text):
+        return "ja"
+    return "en"
+
+def get_target_languages(original_language):
+    if original_language == "en":
+        return ["ja"]
+    elif original_language == "ja":
+        return ["en"]
+    return ["en"]
+
+def format_translations(title_translations, body_translations, original_content, original_language):
+    formatted_parts = []
+    
+    for language, translation in title_translations.items():
+        if translation and language != original_language:
+            language_name = LANGUAGE_NAMES.get(language, language.capitalize())
+            formatted_parts.append(f"<h2>{translation}</h2>")
+    
+    for language, translation in body_translations.items():
+        if translation and language != original_language:
+            language_name = LANGUAGE_NAMES.get(language, language.capitalize())
+            formatted_parts.append(f"\n\n<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}</details>")
+    
+    original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
+    formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b>\n{original_content}")
+    
+    return "\n\n".join(formatted_parts)
+
+def translate_content(content, original_language):
+    translations = {original_language: content}
+    target_languages = get_target_languages(original_language)
+    
+    for language in target_languages:
+        translation = translate_text(content, language)
+        if translation:
+            translations[language] = translation
+    
+    return translations
+
+def translate_pr(pr, original_content, original_language, pr_title, pr_body):
+    title_translations = translate_content(pr_title, original_language)
+    body_translations = translate_content(pr_body, original_language)
+    updated_body = format_translations(title_translations, body_translations, original_content, original_language)
+    
+    if updated_body != pr.body:
+        pr.edit(body=updated_body)
+        return True
+    
+    return False
+
+def translate_pr_comment(comment):
+    if not comment.body:
+        return False
+        
+    current_content = comment.body.strip()
+    original_content = get_original_content(current_content)
+    original_language = detect_language(original_content)
+    translations = translate_content(original_content, original_language)
+    
+    if translations:
+        updated_body = format_translations({}, translations, original_content, original_language)
+        if updated_body != comment.body:
+            comment.edit(body=updated_body)
+            return True
+    
+    return False
+
+def should_translate(pr):
+    labels = [label.name.lower() for label in pr.labels]
+    
+    if NEEDS_TRANSLATION_LABEL.lower() in labels:
+        return True
+    
+    if TRANSLATED_LABEL.lower() in labels and NEEDS_TRANSLATION_LABEL.lower() in labels:
+        return True
+        
+    return False
+
+def main():
+    if not all([GITHUB_TOKEN, REPO_NAME, PR_NUMBER]):
+        print("Missing required environment variables")
+        return
+    
+    try:
+        pr_number = int(PR_NUMBER)
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(REPO_NAME)
+        pr = repo.get_pull(number=pr_number)
+        
+        if not should_translate(pr):
+            print(f"PR #{pr_number} does not require translation at this time.")
+            return
+        
+        # If COMMENT_ID is provided, translate only that comment
+        if COMMENT_ID:
+            comment_id = int(COMMENT_ID)
+            comment = pr.get_issue_comment(comment_id)
+            if translate_pr_comment(comment):
+                labels = [label.name.lower() for label in pr.labels]
+                if TRANSLATED_LABEL.lower() not in labels:
+                    pr.add_to_labels(TRANSLATED_LABEL)
+            return
+        
+        # Otherwise translate the PR body
+        original_content = get_original_content(pr.body)
+        original_language = detect_language(original_content)
+        pr_title = pr.title
+        pr_body = get_original_content(pr.body)
+        
+        if translate_pr(pr, original_content, original_language, pr_title, pr_body):
+            labels = [label.name.lower() for label in pr.labels]
+            if TRANSLATED_LABEL.lower() not in labels:
+                pr.add_to_labels(TRANSLATED_LABEL)
+    
+    except ValueError as ve:
+        print(f"Invalid number format: {ve}")
+        return
+    except Exception as e:
+        print(f"Error: {e}")
+        return
+
+if __name__ == "__main__":
+    main() 
