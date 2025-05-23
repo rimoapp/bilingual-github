@@ -1,6 +1,7 @@
 import sys
 import os
 from github import Github
+import github
 
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
@@ -125,7 +126,11 @@ def main():
         # If COMMENT_ID is provided, translate only that comment
         if COMMENT_ID:
             comment_id = int(COMMENT_ID)
-            comment = pr.get_issue_comment(comment_id)
+            # Check if it's a review comment or an issue comment
+            if github.event_name == 'pull_request_review_comment':
+                comment = pr.get_review_comment(comment_id)
+            else:
+                comment = pr.get_issue_comment(comment_id)
             if translate_pr_comment(comment):
                 labels = [label.name.lower() for label in pr.labels]
                 if TRANSLATED_LABEL.lower() not in labels:
@@ -144,6 +149,12 @@ def main():
         comments = pr.get_issue_comments()
         comments_translated = False
         for comment in comments:
+            if translate_pr_comment(comment):
+                comments_translated = True
+
+        # Translate all review comments on the PR
+        review_comments = pr.get_review_comments()
+        for comment in review_comments:
             if translate_pr_comment(comment):
                 comments_translated = True
 
