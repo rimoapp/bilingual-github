@@ -138,7 +138,16 @@ def main():
         pr_title = pr.title
         pr_body = get_original_content(pr.body)
         
-        if translate_pr(pr, original_content, original_language, pr_title, pr_body):
+        pr_translated = translate_pr(pr, original_content, original_language, pr_title, pr_body)
+
+        # Translate all comments on the PR
+        comments = pr.get_issue_comments()
+        comments_translated = False
+        for comment in comments:
+            if translate_pr_comment(comment):
+                comments_translated = True
+
+        if pr_translated or comments_translated:
             labels = [label.name.lower() for label in pr.labels]
             if TRANSLATED_LABEL.lower() not in labels:
                 pr.add_to_labels(TRANSLATED_LABEL)
