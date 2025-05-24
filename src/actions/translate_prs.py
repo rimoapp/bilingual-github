@@ -67,7 +67,7 @@ def format_translations(title_translations, body_translations, original_content,
 
     # Add original content
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
-    formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b>\n{original_content}")
+    formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b><br>{original_content}")
 
     return "\n".join(formatted_parts).strip()
 
