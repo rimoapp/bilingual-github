@@ -1,7 +1,6 @@
 import sys
 import os
 from github import Github
-import github
 
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
@@ -16,6 +15,7 @@ NEEDS_TRANSLATION_LABEL = "need translation"
 PR_NUMBER = os.getenv("PR_NUMBER", "").strip()
 COMMENT_ID = os.getenv("COMMENT_ID", "").strip()
 ORIGINAL_CONTENT_MARKER = "Original Content:"
+EVENT_NAME = os.getenv("GITHUB_EVENT_NAME", "").strip()
 
 LANGUAGE_NAMES = {
     "ja": "日本語",
@@ -51,21 +51,25 @@ def get_target_languages(original_language):
 
 def format_translations(title_translations, body_translations, original_content, original_language):
     formatted_parts = []
-    
+
+    # Add translated title(s) if any
     for language, translation in title_translations.items():
         if translation and language != original_language:
-            language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             formatted_parts.append(f"<h2>{translation}</h2>")
-    
+
+    # Add translated body(s) if any
     for language, translation in body_translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            formatted_parts.append(f"\n\n<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}</details>")
-    
+            formatted_parts.append(
+                f"<details>\n<summary><b>{language_name}</b></summary>\n{translation}</details>"
+            )
+
+    # Add original content
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b>\n{original_content}")
-    
-    return "\n\n".join(formatted_parts)
+
+    return "\n".join(formatted_parts).strip()
 
 def translate_content(content, original_language):
     translations = {original_language: content}
@@ -136,7 +140,7 @@ def main():
         if COMMENT_ID:
             comment_id = int(COMMENT_ID)
             # Check if it's a review comment or an issue comment
-            if github.event_name == 'pull_request_review_comment':
+            if EVENT_NAME == 'pull_request_review_comment':
                 comment = pr.get_review_comment(comment_id)
             else:
                 comment = pr.get_issue_comment(comment_id)
