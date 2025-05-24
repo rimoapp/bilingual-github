@@ -1,6 +1,7 @@
 import sys
 import os
 from github import Github
+import re
 
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
@@ -24,8 +25,10 @@ LANGUAGE_NAMES = {
 
 def get_original_content(content):
     if ORIGINAL_CONTENT_MARKER in content:
-        parts = content.split(ORIGINAL_CONTENT_MARKER)
-        return parts[1].strip()
+        parts = content.split(ORIGINAL_CONTENT_MARKER, 1)
+        original = parts[1].lstrip()
+        original = re.sub(r'^(<br>\\s*)+', '', original)
+        return original.strip()
     return content.strip()
 
 def detect_language(text):
