@@ -51,13 +51,9 @@ jobs:
       - name: Commit and Push Translations
         working-directory: target-repo
         run: |
-          translated_files=$(find . -name "*.ja.md")
-          
-          if [ -n "$translated_files" ]; then
-            echo "Translation files generated:"
-            echo "$translated_files"
-            git add $translated_files
-            git commit -m "Update markdown translations [skip ci]"
+          if [ -d "en.docs" ]; then
+            git add en.docs
+            git commit -m "Update English markdown translations" || echo "No changes to commit"
             git push
           else
             echo "No translations generated"
