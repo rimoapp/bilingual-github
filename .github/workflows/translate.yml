@@ -5,6 +5,8 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: true
+      GITHUB_TOKEN:
+        required: true
     inputs:
       issue_number:
         required: true
@@ -24,6 +26,7 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
+      contents: read
     
     steps:
       - name: Checkout bilingual-github
@@ -31,12 +34,14 @@ jobs:
         with:
           repository: rimoapp/bilingual-github
           path: bilingual-github
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Checkout target repository
         uses: actions/checkout@v3
         with:
           repository: ${{ inputs.target_repository }}
           path: target-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set Up Python
         uses: actions/setup-python@v4
