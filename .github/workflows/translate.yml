@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: ''
+      target_repository:
+        required: true
+        type: string
+        description: 'The repository where the content needs to be translated'
 
 jobs:
   translate:
@@ -22,8 +26,17 @@ jobs:
       pull-requests: write
     
     steps:
-      - name: Checkout Repository
+      - name: Checkout bilingual-github
         uses: actions/checkout@v3
+        with:
+          repository: rimoapp/bilingual-github
+          path: bilingual-github
+      
+      - name: Checkout target repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.target_repository }}
+          path: target-repo
       
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -32,11 +45,13 @@ jobs:
       
       - name: Install Dependencies
         run: |
+          cd bilingual-github
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
       - name: Translate Content
         run: |
+          cd bilingual-github
           case "${{ github.event_name }}" in
             "issues")
               python src/actions/translate_issues.py
@@ -65,4 +80,4 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           PR_NUMBER: ${{ inputs.issue_number }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-          TARGET_REPOSITORY: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.repository || github.repository }} 
+          TARGET_REPOSITORY: ${{ inputs.target_repository }} 
