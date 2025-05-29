@@ -59,17 +59,12 @@ def format_translations(title_translations, body_translations, original_content,
     for language, translation in body_translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
-            # If translation contains a table or heading, wrap in code block
-            if '|' in translation or translation.strip().startswith('#'):
-                translation = f"```md\n{translation}\n```"
             formatted_parts.append(
                 f"<details>\n<summary><b>{language_name}</b></summary>\n{translation}</details>"
             )
 
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
     
-    if '|' in original_content or original_content.strip().startswith('#'):
-        original_content = f"```md\n{original_content}\n```"
     formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b><br>{original_content}")
 
     return "\n".join(formatted_parts).strip()
