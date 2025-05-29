@@ -32,15 +32,12 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    # Count Japanese characters (Hiragana, Katakana, Kanji)
     jp_chars = sum(1 for char in text if '\u3040' <= char <= '\u309F' or  # Hiragana
                                   '\u30A0' <= char <= '\u30FF' or  # Katakana
                                   '\u4E00' <= char <= '\u9FFF')    # Kanji
     
-    # Count English characters (basic Latin)
-    en_chars = sum(1 for char in text if '\u0041' <= char <= '\u007A')  # Basic Latin
+    en_chars = sum(1 for char in text if '\u0041' <= char <= '\u007A')  
     
-    # If there are more Japanese characters than English, it's Japanese
     if jp_chars > en_chars:
         return "ja"
     return "en"
@@ -55,21 +52,24 @@ def get_target_languages(original_language):
 def format_translations(title_translations, body_translations, original_content, original_language):
     formatted_parts = []
 
-    # Add translated title(s) if any
     for language, translation in title_translations.items():
         if translation and language != original_language:
             formatted_parts.append(f"<h2>{translation}</h2>")
 
-    # Add translated body(s) if any
     for language, translation in body_translations.items():
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
+            # If translation contains a table or heading, wrap in code block
+            if '|' in translation or translation.strip().startswith('#'):
+                translation = f"```md\n{translation}\n```"
             formatted_parts.append(
                 f"<details>\n<summary><b>{language_name}</b></summary>\n{translation}</details>"
             )
 
-    # Add original content
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
+    
+    if '|' in original_content or original_content.strip().startswith('#'):
+        original_content = f"```md\n{original_content}\n```"
     formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b><br>{original_content}")
 
     return "\n".join(formatted_parts).strip()
@@ -139,7 +139,6 @@ def main():
             print(f"PR #{pr_number} does not require translation at this time.")
             return
         
-        # If COMMENT_ID is provided, translate only that comment
         if COMMENT_ID:
             comment_id = int(COMMENT_ID)
             # Check if it's a review comment or an issue comment
