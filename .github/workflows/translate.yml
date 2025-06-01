@@ -5,8 +5,6 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: true
-      GITHUB_TOKEN:
-        required: true
     inputs:
       issue_number:
         required: true
@@ -34,14 +32,12 @@ jobs:
         with:
           repository: rimoapp/bilingual-github
           path: bilingual-github
-          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Checkout target repository
         uses: actions/checkout@v3
         with:
           repository: ${{ inputs.target_repository }}
           path: target-repo
-          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -79,7 +75,6 @@ jobs:
               ;;
           esac
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           COMMENT_ID: ${{ inputs.comment_id }}
