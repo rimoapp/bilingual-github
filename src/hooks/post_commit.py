@@ -111,11 +111,30 @@ def process_specific_files(file_list):
             else:
                 print(f"File not found: {file}")
 
+def delete_translated_files(deleted_files):
+    if not deleted_files:
+        return
+    files = deleted_files.split(',')
+    for file in files:
+        file = file.strip()
+        if not file.endswith('.md'):
+            continue
+        for lang in TARGET_LANGUAGES:
+            translated_path = get_translated_path(file, lang)
+            if translated_path.exists():
+                print(f"Deleting translated file: {translated_path}")
+                os.remove(translated_path)
+
 def main():
     parser = argparse.ArgumentParser(description='Translate markdown files')
     parser.add_argument('--initial-setup', action='store_true', help='Perform initial setup translation')
     parser.add_argument('--files', type=str, help='Comma-separated list of files to translate')
+    parser.add_argument('--deleted-files', type=str, help='Comma-separated list of deleted files')
     args = parser.parse_args()
+
+    if args.deleted_files:
+        print(f"Deleting translated files for: {args.deleted_files}")
+        delete_translated_files(args.deleted_files)
 
     if args.initial_setup:
         print("Performing initial setup translation")

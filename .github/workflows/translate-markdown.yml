@@ -16,6 +16,11 @@ on:
         type: string
         default: ''
         description: 'Comma-separated list of changed files'
+      deleted_files:
+        required: false
+        type: string
+        default: ''
+        description: 'Comma-separated list of deleted files'
 
 jobs:
   translate-markdown:
@@ -59,13 +64,15 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           IS_INITIAL_SETUP: ${{ inputs.is_initial_setup }}
           CHANGED_FILES: ${{ inputs.changed_files }}
+          DELETED_FILES: ${{ inputs.deleted_files }}
         run: |
           if [ "$IS_INITIAL_SETUP" = "true" ]; then
             echo "Performing initial setup translation"
             python ../bilingual-github/src/hooks/post_commit.py --initial-setup
-          elif [ -n "$CHANGED_FILES" ]; then
+          elif [ -n "$CHANGED_FILES" ] || [ -n "$DELETED_FILES" ]; then
             echo "Translating changed files: $CHANGED_FILES"
-            python ../bilingual-github/src/hooks/post_commit.py --files "$CHANGED_FILES"
+            echo "Deleting translated files for: $DELETED_FILES"
+            python ../bilingual-github/src/hooks/post_commit.py --files "$CHANGED_FILES" --deleted-files "$DELETED_FILES"
           else
             echo "Translating all markdown files"
             python ../bilingual-github/src/hooks/post_commit.py
