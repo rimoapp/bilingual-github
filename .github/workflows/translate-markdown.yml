@@ -5,6 +5,17 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: true
+    inputs:
+      is_initial_setup:
+        required: false
+        type: boolean
+        default: false
+        description: 'Whether this is the initial setup run'
+      changed_files:
+        required: false
+        type: string
+        default: ''
+        description: 'Comma-separated list of changed files'
 
 jobs:
   translate-markdown:
@@ -23,6 +34,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: target-repo
+          fetch-depth: 0  # Fetch all history for better diff detection
 
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -45,15 +57,26 @@ jobs:
         working-directory: target-repo
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          IS_INITIAL_SETUP: ${{ inputs.is_initial_setup }}
+          CHANGED_FILES: ${{ inputs.changed_files }}
         run: |
-          python ../bilingual-github/src/hooks/post_commit.py
+          if [ "$IS_INITIAL_SETUP" = "true" ]; then
+            echo "Performing initial setup translation"
+            python ../bilingual-github/src/hooks/post_commit.py --initial-setup
+          elif [ -n "$CHANGED_FILES" ]; then
+            echo "Translating changed files: $CHANGED_FILES"
+            python ../bilingual-github/src/hooks/post_commit.py --files "$CHANGED_FILES"
+          else
+            echo "Translating all markdown files"
+            python ../bilingual-github/src/hooks/post_commit.py
+          fi
 
       - name: Commit and Push Translations
         working-directory: target-repo
         run: |
-          if [ -d "en.docs" ]; then
-            git add en.docs
-            git commit -m "Update English markdown translations" || echo "No changes to commit"
+          if [ -d "docs.en" ] || [ -d "docs.ja" ] || [ -f "README.en.md" ] || [ -f "README.ja.md" ]; then
+            git add docs.en docs.ja README.en.md README.ja.md
+            git commit -m "Update markdown translations" || echo "No changes to commit"
             git push
           else
             echo "No translations generated"
