@@ -74,10 +74,10 @@ jobs:
       - name: Commit and Push Translations
         working-directory: target-repo
         run: |
-          if [ -d "docs.en" ] || [ -d "docs.ja" ] || [ -f "README.en.md" ] || [ -f "README.ja.md" ]; then
-            git add docs.en docs.ja README.en.md README.ja.md
-            git commit -m "Update markdown translations" || echo "No changes to commit"
-            git push
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
           else
-            echo "No translations generated"
+            git commit -m "Update markdown translations"
+            git push
           fi
