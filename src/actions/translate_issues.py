@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 from github import Github
 
 script_dir = os.path.dirname(__file__)
@@ -27,9 +28,19 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    if any(ord(char) > 128 for char in text):
-        return "ja"
-    return "en"
+    # Unicode ranges for Japanese characters
+    HIRAGANA = '\u3040-\u309F'
+    KATAKANA = '\u30A0-\u30FF'
+    KANJI = '\u4E00-\u9FFF'
+    HALF_WIDTH_KATAKANA = '\uFF60-\uFF9F'
+    
+    # Check if text contains any Japanese character
+    jp_pattern = f'[{HIRAGANA}{KATAKANA}{KANJI}{HALF_WIDTH_KATAKANA}]'
+    has_japanese = bool(re.search(jp_pattern, text))
+    
+    # If any Japanese character is found, original is Japanese, translate to English
+    # Otherwise, original is English, translate to Japanese
+    return "ja" if has_japanese else "en"
 
 def get_target_languages(original_language):
     if original_language == "en":

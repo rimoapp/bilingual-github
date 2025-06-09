@@ -3,6 +3,7 @@ import sys
 import argparse
 from pathlib import Path
 from difflib import unified_diff
+import re
 
 script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
@@ -13,18 +14,19 @@ from utils.translation import translate_text
 TARGET_LANGUAGES = ["en", "ja"]
 
 def detect_source_language(text):
-    # Count Japanese characters (Hiragana, Katakana, Kanji)
-    jp_chars = sum(1 for char in text if '\u3040' <= char <= '\u309F' or  # Hiragana
-                                  '\u30A0' <= char <= '\u30FF' or  # Katakana
-                                  '\u4E00' <= char <= '\u9FFF')    # Kanji
+    # Unicode ranges for Japanese characters
+    HIRAGANA = '\u3040-\u309F'
+    KATAKANA = '\u30A0-\u30FF'
+    KANJI = '\u4E00-\u9FFF'
+    HALF_WIDTH_KATAKANA = '\uFF60-\uFF9F'
     
-    # Count English characters
-    en_chars = sum(1 for char in text if '\u0041' <= char <= '\u007A')  
+    # Check if text contains any Japanese character
+    jp_pattern = f'[{HIRAGANA}{KATAKANA}{KANJI}{HALF_WIDTH_KATAKANA}]'
+    has_japanese = bool(re.search(jp_pattern, text))
     
-    # If Japanese characters are more frequent, it's Japanese
-    if jp_chars > en_chars:
-        return "ja"
-    return "en"
+    # If any Japanese character is found, original is Japanese, translate to English
+    # Otherwise, original is English, translate to Japanese
+    return "ja" if has_japanese else "en"
 
 def read_file(file_path):
     try:

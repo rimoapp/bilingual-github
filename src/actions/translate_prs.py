@@ -32,15 +32,19 @@ def get_original_content(content):
     return content.strip()
 
 def detect_language(text):
-    jp_chars = sum(1 for char in text if '\u3040' <= char <= '\u309F' or  # Hiragana
-                                  '\u30A0' <= char <= '\u30FF' or  # Katakana
-                                  '\u4E00' <= char <= '\u9FFF')    # Kanji
+    # Unicode ranges for Japanese characters
+    HIRAGANA = '\u3040-\u309F'
+    KATAKANA = '\u30A0-\u30FF'
+    KANJI = '\u4E00-\u9FFF'
+    HALF_WIDTH_KATAKANA = '\uFF60-\uFF9F'
     
-    en_chars = sum(1 for char in text if '\u0041' <= char <= '\u007A')  
+    # Check if text contains any Japanese character
+    jp_pattern = f'[{HIRAGANA}{KATAKANA}{KANJI}{HALF_WIDTH_KATAKANA}]'
+    has_japanese = bool(re.search(jp_pattern, text))
     
-    if jp_chars > en_chars:
-        return "ja"
-    return "en"
+    # If any Japanese character is found, original is Japanese, translate to English
+    # Otherwise, original is English, translate to Japanese
+    return "ja" if has_japanese else "en"
 
 def get_target_languages(original_language):
     if original_language == "en":
