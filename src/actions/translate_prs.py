@@ -27,7 +27,7 @@ def get_original_content(content):
     if ORIGINAL_CONTENT_MARKER in content:
         parts = content.split(ORIGINAL_CONTENT_MARKER, 1)
         original = parts[1].lstrip()
-        original = re.sub(r'^(<br>\\s*)+', '', original)
+        original = re.sub(r'^(<br>\s*)+', '', original)
         return original.strip()
     return content.strip()
 
@@ -60,11 +60,11 @@ def format_translations(title_translations, body_translations, original_content,
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             formatted_parts.append(
-                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
+                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details><br>"
             )
 
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
-    formatted_parts.append(f"**{ORIGINAL_CONTENT_MARKER}**\n\n{original_content}")
+    formatted_parts.append(f"<b>{ORIGINAL_CONTENT_MARKER}</b>\n\n{original_content}")
 
     return "\n\n".join(formatted_parts).strip()
 

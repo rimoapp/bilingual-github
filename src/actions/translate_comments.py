@@ -46,7 +46,7 @@ def format_translations(translations, original_content, original_language):
         if translation and language != original_language:
             language_name = LANGUAGE_NAMES.get(language, language.capitalize())
             formatted_parts.append(
-                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details>"
+                f"<details>\n<summary><b>{language_name}</b></summary>\n\n{translation}\n</details><br>"
             )
     
     original_lang_name = LANGUAGE_NAMES.get(original_language, original_language.capitalize())
