@@ -20,6 +20,16 @@ on:
         required: true
         type: string
         description: 'The repository where the content needs to be translated'
+      changed_files:
+        required: false
+        type: string
+        default: ''
+        description: 'Comma-separated list of changed files'
+      deleted_files:
+        required: false
+        type: string
+        default: ''
+        description: 'Comma-separated list of deleted files'
 
 jobs:
   translate:
@@ -66,6 +76,13 @@ jobs:
               ;;
             "pull_request_review")
               python src/actions/translate_prs.py
+              ;;
+            "push")
+              if [ -n "${{ inputs.changed_files }}" ] || [ -n "${{ inputs.deleted_files }}" ]; then
+                python src/hooks/post_commit.py --files "${{ inputs.changed_files }}" --deleted-files "${{ inputs.deleted_files }}"
+              else
+                python src/hooks/post_commit.py
+              fi
               ;;
             *)
               echo "Unsupported event type: ${{ github.event_name }}"
