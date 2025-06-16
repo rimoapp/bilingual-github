@@ -83,11 +83,13 @@ def translate_content(content, original_language):
     
     return translations
 
-def extract_reply_content(comment_body):
+def split_quoted_and_reply_content(comment_body):
     lines = comment_body.splitlines()
+    quoted_lines = [line for line in lines if line.strip().startswith('>')]
     reply_lines = [line for line in lines if not line.strip().startswith('>')]
+    quoted_content = '\n'.join(quoted_lines).strip()
     reply_content = '\n'.join(reply_lines).strip()
-    return reply_content
+    return quoted_content, reply_content
 
 def translate_pr(pr, original_content, original_language, pr_title, pr_body):
     title_translations = translate_content(pr_title, original_language)
@@ -105,14 +107,18 @@ def translate_pr_comment(comment):
         return False
     
     current_content = comment.body.strip()
-    reply_content = extract_reply_content(current_content)
+    quoted_content, reply_content = split_quoted_and_reply_content(current_content)
     if not reply_content:
         reply_content = get_original_content(current_content)
     original_language = detect_language(reply_content)
     translations = translate_content(reply_content, original_language)
     
     if translations:
-        updated_body = format_translations({}, translations, reply_content, original_language)
+        translated_reply = format_translations({}, translations, reply_content, original_language)
+        if quoted_content:
+            updated_body = f"{quoted_content}\n\n{translated_reply}"
+        else:
+            updated_body = translated_reply
         if updated_body != comment.body:
             comment.edit(body=updated_body)
             return True
