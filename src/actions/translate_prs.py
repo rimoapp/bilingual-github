@@ -83,6 +83,12 @@ def translate_content(content, original_language):
     
     return translations
 
+def extract_reply_content(comment_body):
+    lines = comment_body.splitlines()
+    reply_lines = [line for line in lines if not line.strip().startswith('>')]
+    reply_content = '\n'.join(reply_lines).strip()
+    return reply_content
+
 def translate_pr(pr, original_content, original_language, pr_title, pr_body):
     title_translations = translate_content(pr_title, original_language)
     body_translations = translate_content(pr_body, original_language)
@@ -97,14 +103,16 @@ def translate_pr(pr, original_content, original_language, pr_title, pr_body):
 def translate_pr_comment(comment):
     if not comment.body:
         return False
-        
+    
     current_content = comment.body.strip()
-    original_content = get_original_content(current_content)
-    original_language = detect_language(original_content)
-    translations = translate_content(original_content, original_language)
+    reply_content = extract_reply_content(current_content)
+    if not reply_content:
+        reply_content = get_original_content(current_content)
+    original_language = detect_language(reply_content)
+    translations = translate_content(reply_content, original_language)
     
     if translations:
-        updated_body = format_translations({}, translations, original_content, original_language)
+        updated_body = format_translations({}, translations, reply_content, original_language)
         if updated_body != comment.body:
             comment.edit(body=updated_body)
             return True
