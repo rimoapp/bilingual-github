@@ -84,11 +84,37 @@ def translate_content(content, original_language):
     return translations
 
 def split_quoted_and_reply_content(comment_body):
+    """
+    Splits the comment into quoted content (lines starting with '>') and reply content (all other lines).
+    Preserves the original structure including empty lines between quoted and reply sections.
+    Returns (quoted_content, reply_content) as strings.
+    """
     lines = comment_body.splitlines()
-    quoted_lines = [line for line in lines if line.strip().startswith('>')]
-    reply_lines = [line for line in lines if not line.strip().startswith('>')]
+    
+    # Find the last quoted line to determine where quoted content ends
+    last_quoted_index = -1
+    for i, line in enumerate(lines):
+        if line.strip().startswith('>'):
+            last_quoted_index = i
+    
+    if last_quoted_index == -1:
+        # No quoted content found
+        return "", comment_body.strip()
+    
+    # Extract quoted content (including any empty lines within the quoted block)
+    quoted_lines = []
+    for i in range(last_quoted_index + 1):
+        quoted_lines.append(lines[i])
+    
+    # Extract reply content (everything after the quoted block, excluding leading empty lines)
+    reply_lines = lines[last_quoted_index + 1:]
+    # Remove leading empty lines from reply
+    while reply_lines and not reply_lines[0].strip():
+        reply_lines.pop(0)
+    
     quoted_content = '\n'.join(quoted_lines).strip()
     reply_content = '\n'.join(reply_lines).strip()
+    
     return quoted_content, reply_content
 
 def translate_pr(pr, original_content, original_language, pr_title, pr_body):
