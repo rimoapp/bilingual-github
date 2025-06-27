@@ -133,9 +133,18 @@ def translate_pr_comment(comment):
         return False
     
     current_content = comment.body.strip()
-    quoted_content, reply_content = split_quoted_and_reply_content(current_content)
-    if not reply_content:
-        reply_content = get_original_content(current_content)
+    
+    # Check if this is already a translated comment
+    if ORIGINAL_CONTENT_MARKER in current_content:
+        # Extract the original content which includes quoted content with formatting
+        original_full_content = get_original_content(current_content)
+        quoted_content, reply_content = split_quoted_and_reply_content(original_full_content)
+    else:
+        # This is a fresh comment
+        quoted_content, reply_content = split_quoted_and_reply_content(current_content)
+        if not reply_content:
+            reply_content = current_content
+    
     original_language = detect_language(reply_content)
     translations = translate_content(reply_content, original_language)
     
