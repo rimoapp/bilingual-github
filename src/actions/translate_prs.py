@@ -140,7 +140,13 @@ def translate_pr_comment(comment):
     translations = translate_content(reply_content, original_language)
     
     if translations:
-        translated_reply = format_translations({}, translations, reply_content, original_language)
+        # When there's quoted content, we need to include it in the original content too
+        if quoted_content:
+            original_content_with_quote = f"{quoted_content}\n\n{reply_content}"
+        else:
+            original_content_with_quote = reply_content
+            
+        translated_reply = format_translations({}, translations, original_content_with_quote, original_language)
         if quoted_content:
             updated_body = f"{quoted_content}\n\n{translated_reply}"
         else:
