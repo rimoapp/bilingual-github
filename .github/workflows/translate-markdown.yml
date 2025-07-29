@@ -21,12 +21,34 @@ on:
         type: string
         default: ''
         description: 'Comma-separated list of deleted files'
+      commit_hash:
+        required: false
+        type: string
+        default: ''
+        description: 'Current commit hash'
+      is_pr:
+        required: false
+        type: boolean
+        default: false
+        description: 'Whether this is a PR event'
+      pr_number:
+        required: false
+        type: string
+        default: ''
+        description: 'PR number if applicable'
+      target_branch:
+        required: false
+        type: string
+        default: ''
+        description: 'Target branch for PR commits'
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   translate-markdown:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout Translation Tools Repository
@@ -39,7 +61,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: target-repo
-          fetch-depth: 0  # Fetch all history for better diff detection
+          fetch-depth: 0
 
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -58,6 +80,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Switch to target branch for PR
+        if: inputs.is_pr == true
+        working-directory: target-repo
+        run: |
+          git checkout ${{ inputs.target_branch }}
+
       - name: Generate Markdown Translations
         working-directory: target-repo
         env:
@@ -65,17 +93,21 @@ jobs:
           IS_INITIAL_SETUP: ${{ inputs.is_initial_setup }}
           CHANGED_FILES: ${{ inputs.changed_files }}
           DELETED_FILES: ${{ inputs.deleted_files }}
+          COMMIT_HASH: ${{ inputs.commit_hash }}
+          IS_PR: ${{ inputs.is_pr }}
         run: |
+          echo "Debug: OPENAI_API_KEY is set: $([ -n "$OPENAI_API_KEY" ] && echo "yes" || echo "no")"
+          
           if [ "$IS_INITIAL_SETUP" = "true" ]; then
             echo "Performing initial setup translation"
-            python ../bilingual-github/src/hooks/post_commit.py --initial-setup
+            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --initial-setup --commit-hash "$COMMIT_HASH"
           elif [ -n "$CHANGED_FILES" ] || [ -n "$DELETED_FILES" ]; then
             echo "Translating changed files: $CHANGED_FILES"
             echo "Deleting translated files for: $DELETED_FILES"
-            python ../bilingual-github/src/hooks/post_commit.py --files "$CHANGED_FILES" --deleted-files "$DELETED_FILES"
+            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --files "$CHANGED_FILES" --deleted-files "$DELETED_FILES" --commit-hash "$COMMIT_HASH"
           else
             echo "Translating all markdown files"
-            python ../bilingual-github/src/hooks/post_commit.py
+            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --commit-hash "$COMMIT_HASH"
           fi
 
       - name: Commit and Push Translations
@@ -85,6 +117,11 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update markdown translations"
-            git push
+            if [ "${{ inputs.is_pr }}" = "true" ]; then
+              git commit -m "Update markdown translations [skip-translation]"
+              git push origin ${{ inputs.target_branch }}
+            else
+              git commit -m "Update markdown translations [skip-translation]"
+              git push
+            fi
           fi
