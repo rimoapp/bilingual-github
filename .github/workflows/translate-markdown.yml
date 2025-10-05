@@ -1,10 +1,14 @@
 name: Translate Markdown Files
-
+ 
 on:
   workflow_call:
     secrets:
       OPENAI_API_KEY:
         required: true
+      RIMO_GITHUB_APP_ID:
+        required: false
+      RIMO_GITHUB_APP_PRIVATE_KEY:
+        required: false
     inputs:
       is_initial_setup:
         required: false
@@ -46,17 +50,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        if: ${{ secrets.RIMO_GITHUB_APP_ID != '' }}
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.RIMO_GITHUB_APP_ID }}
+          private_key: ${{ secrets.RIMO_GITHUB_APP_PRIVATE_KEY }}
+
       - name: Checkout Translation Tools Repository
         uses: actions/checkout@v3
         with:
-          repository: rimoapp/bilingual-github
+          repository: HrxSrv/bilingual-github
           path: bilingual-github
+          token: ${{ steps.generate_token.outputs.token || github.token }}
 
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
           path: target-repo
           fetch-depth: 0
+          token: ${{ steps.generate_token.outputs.token || github.token }}
 
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -72,8 +86,13 @@ jobs:
       - name: Configure Git User
         working-directory: target-repo
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "${{ steps.generate_token.outputs.token }}" ]; then
+            git config user.name "rimo-translation-bot[bot]"
+            git config user.email "rimo-translation-bot[bot]@users.noreply.github.com"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+          fi
 
       - name: Switch to target branch for PR
         if: inputs.is_pr == true
