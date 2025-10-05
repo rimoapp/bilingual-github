@@ -21,11 +21,6 @@ on:
         type: string
         default: ''
         description: 'Comma-separated list of deleted files'
-      commit_hash:
-        required: false
-        type: string
-        default: ''
-        description: 'Current commit hash'
       is_pr:
         required: false
         type: boolean
@@ -93,21 +88,20 @@ jobs:
           IS_INITIAL_SETUP: ${{ inputs.is_initial_setup }}
           CHANGED_FILES: ${{ inputs.changed_files }}
           DELETED_FILES: ${{ inputs.deleted_files }}
-          COMMIT_HASH: ${{ inputs.commit_hash }}
           IS_PR: ${{ inputs.is_pr }}
         run: |
           echo "Debug: OPENAI_API_KEY is set: $([ -n "$OPENAI_API_KEY" ] && echo "yes" || echo "no")"
           
           if [ "$IS_INITIAL_SETUP" = "true" ]; then
             echo "Performing initial setup translation"
-            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --initial-setup --commit-hash "$COMMIT_HASH"
+            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --initial-setup
           elif [ -n "$CHANGED_FILES" ] || [ -n "$DELETED_FILES" ]; then
             echo "Translating changed files: $CHANGED_FILES"
             echo "Deleting translated files for: $DELETED_FILES"
-            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --files "$CHANGED_FILES" --deleted-files "$DELETED_FILES" --commit-hash "$COMMIT_HASH"
+            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --files "$CHANGED_FILES" --deleted-files "$DELETED_FILES"
           else
             echo "Translating all markdown files"
-            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py --commit-hash "$COMMIT_HASH"
+            OPENAI_API_KEY="${OPENAI_API_KEY}" python ../bilingual-github/src/hooks/post_commit.py
           fi
 
       - name: Commit and Push Translations
@@ -119,9 +113,23 @@ jobs:
           else
             if [ "${{ inputs.is_pr }}" = "true" ]; then
               git commit -m "Update markdown translations [skip-translation]"
+              
+              # Pull with rebase to handle any new commits, then push
+              echo "Pulling latest changes before push..."
+              git pull --rebase origin ${{ inputs.target_branch }} || {
+                echo "Rebase conflict detected, aborting and retrying with merge"
+                git rebase --abort
+                git pull origin ${{ inputs.target_branch }}
+              }
+              
+              echo "Pushing translations..."
               git push origin ${{ inputs.target_branch }}
             else
               git commit -m "Update markdown translations [skip-translation]"
+              git pull --rebase origin HEAD || {
+                git rebase --abort
+                git pull origin HEAD
+              }
               git push
             fi
           fi
