@@ -5,6 +5,9 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: true
+      BILINGUAL_GITHUB_ACCESS_TOKEN:
+        required: true
+        description: 'Token to access private bilingual-github repository'
       RIMO_GITHUB_APP_ID:
         required: false
       RIMO_GITHUB_APP_PRIVATE_KEY:
@@ -77,8 +80,7 @@ jobs:
         with:
           repository: rimoapp/bilingual-github
           path: bilingual-github
-          token: ${{ github.token }}
-
+          token: ${{ steps.generate_token.outputs.token || github.token }}
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
