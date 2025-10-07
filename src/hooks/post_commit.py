@@ -14,7 +14,7 @@ sys.path.insert(0, src_dir)
 from utils.translation import translate_text, translate_incremental
 
 TARGET_LANGUAGES = ["en", "ja"]
-TRANSLATION_IGNORE_FILE = ".ignore_md_translation"
+TRANSLATION_IGNORE_FILE = ".transignore"
 
 # Incremental translation thresholds
 DIFF_THRESHOLD_PERCENT = 50  # If diff > 30%, use full translation
