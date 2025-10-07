@@ -50,9 +50,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Generate GitHub App Token
+      - name: Check if Rimo GitHub App credentials exist
+        id: check_app_creds
+        env:
+          RIMO_APP_ID: ${{ secrets.RIMO_GITHUB_APP_ID }}
+          RIMO_PRIVATE_KEY: ${{ secrets.RIMO_GITHUB_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -n "$RIMO_APP_ID" && -n "$RIMO_PRIVATE_KEY" ]]; then
+            echo "has_app_creds=true" >> $GITHUB_OUTPUT
+            echo "Rimo GitHub App credentials found"
+          else
+            echo "has_app_creds=false" >> $GITHUB_OUTPUT
+            echo "Rimo GitHub App credentials not found, will use GITHUB_TOKEN"
+          fi
+
+      - name: Generate GitHub App Token (for commits only)
         id: generate_token
-        if: ${{ secrets.RIMO_GITHUB_APP_ID != '' }}
+        if: steps.check_app_creds.outputs.has_app_creds == 'true'
         uses: tibdex/github-app-token@v1
         with:
           app_id: ${{ secrets.RIMO_GITHUB_APP_ID }}
@@ -63,14 +77,14 @@ jobs:
         with:
           repository: rimoapp/bilingual-github
           path: bilingual-github
-          token: ${{ steps.generate_token.outputs.token || github.token }}
+          token: ${{ github.token }}
 
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
           path: target-repo
           fetch-depth: 0
-          token: ${{ steps.generate_token.outputs.token || github.token }}
+          token: ${{ github.token }}
 
       - name: Set Up Python
         uses: actions/setup-python@v4
@@ -125,7 +139,13 @@ jobs:
 
       - name: Commit and Push Translations
         working-directory: target-repo
+        env:
+          # Use Rimo App token for commits if available, otherwise use GITHUB_TOKEN
+          GH_TOKEN: ${{ steps.generate_token.outputs.token || github.token }}
         run: |
+          # Configure git to use the appropriate token
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
+          
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit"
