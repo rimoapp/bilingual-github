@@ -139,8 +139,7 @@ jobs:
       - name: Commit and Push Translations
         working-directory: target-repo
         env:
-          # Use Rimo App token for commits if available, otherwise use GITHUB_TOKEN
-          GH_TOKEN: ${{ steps.generate_token.outputs.token || github.token }}
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
           # Configure git to use the appropriate token
           git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
