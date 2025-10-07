@@ -80,24 +80,17 @@ jobs:
 ```
 ```python
 name: Trigger Markdown Translation
-
+ 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - '**.md'
-      - '**.en.md'
-      - '**.ja.md'
-      - '.github/workflows/trigger-translation.yml'
-  push:
-    branches:
-      - main
-      - master  
-    paths:
-      - '**.md'
-      - '**.en.md'
-      - '**.ja.md'
-      - '.github/workflows/trigger-translation.yml'
+
+# Prevent concurrent runs for the same PR
+concurrency:
+  group: translation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -137,8 +130,22 @@ jobs:
       - name: Check for changes
         id: check
         run: |
+          # Check if this is a PR event and if it has the translation label
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            HAS_LABEL=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r '.[] | select(.name == "needs_markdown_translation") | .name')
+            
+            if [[ "$HAS_LABEL" != "needs_markdown_translation" ]]; then
+              echo "should_translate=false" >> $GITHUB_OUTPUT
+              echo "skip_reason=missing_label" >> $GITHUB_OUTPUT
+              echo "skip_translation=true" >> $GITHUB_OUTPUT
+              echo "has_changes=false" >> $GITHUB_OUTPUT
+              echo "Translation label 'needs_markdown_translation' not found on PR"
+              exit 0
+            fi
+          fi
+          
           # Check if commit message contains [skip-translation] or is a merge commit
-          COMMIT_MSG="${{ github.event.head_commit.message || github.event.pull_request.title }}"
+          COMMIT_MSG='${{ github.event.head_commit.message || github.event.pull_request.title }}'
           if [[ "$COMMIT_MSG" == *"[skip-translation]"* ]] || [[ "$COMMIT_MSG" == "Merge pull request"* ]] || [[ "$COMMIT_MSG" == "Merge branch"* ]]; then
             echo "skip_translation=true" >> $GITHUB_OUTPUT
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -148,81 +155,47 @@ jobs:
           
           echo "skip_translation=false" >> $GITHUB_OUTPUT
           
-          # Determine if this is a PR event
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "is_pr=true" >> $GITHUB_OUTPUT
-            echo "pr_number=${{ github.event.number }}" >> $GITHUB_OUTPUT
-            echo "target_branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          # This is always a PR event now
+          echo "is_pr=true" >> $GITHUB_OUTPUT
+          echo "pr_number=${{ github.event.number }}" >> $GITHUB_OUTPUT
+          echo "target_branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          
+          # Get changed files from the PR
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.md$|\.en\.md$|\.ja\.md$' || true)
+            
+          # Remove duplicates and format
+          CHANGED_FILES=$(echo "$CHANGED_FILES" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+          
+          echo "Changed markdown files: $CHANGED_FILES"
+          
+          # Check for deleted markdown files in the PR
+          DELETED_FILES=$(git diff --name-only --diff-filter=D origin/${{ github.base_ref }}...HEAD | grep -E '\.md$|\.en\.md$|\.ja\.md$' || true)
+          DELETED_FILES=$(echo "$DELETED_FILES" | tr '\n' ',' | sed 's/,$//')
+          
+          echo "Deleted files: $DELETED_FILES"
+          
+          if [[ -n "$CHANGED_FILES" ]] || [[ -n "$DELETED_FILES" ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            echo "is_pr=false" >> $GITHUB_OUTPUT
-            echo "pr_number=" >> $GITHUB_OUTPUT
-            echo "target_branch=" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
           
-          # Check if this is the first commit with the workflow file
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
-            echo "is_initial_setup=true" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "deleted_files=" >> $GITHUB_OUTPUT
-            echo "changed_files=" >> $GITHUB_OUTPUT
-            exit 0
-          else
-            # Get changed files from commits
-            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              # For PR, get files changed in the PR
-              CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.md$|\.en\.md$|\.ja\.md$' || true)
-            else
-              # For push, get files changed in the push
-              CHANGED_FILES=""
-              for commit in $(git rev-list ${{ github.event.before }}..${{ github.event.after }}); do
-                FILES=$(git diff-tree --no-commit-id --name-only -r $commit | grep -E '\.md$|\.en\.md$|\.ja\.md$' || true)
-                if [[ -n "$FILES" ]]; then
-                  if [[ -n "$CHANGED_FILES" ]]; then
-                    CHANGED_FILES="$CHANGED_FILES,$FILES"
-                  else
-                    CHANGED_FILES="$FILES"
-                  fi
-                fi
-              done
-            fi
-            
-            # Remove duplicates and format
-            CHANGED_FILES=$(echo "$CHANGED_FILES" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
-            
-            echo "Changed markdown files: $CHANGED_FILES"
-            
-            # Check for deleted markdown files
-            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              DELETED_FILES=$(git diff --name-only --diff-filter=D origin/${{ github.base_ref }}...HEAD | grep -E '\.md$|\.en\.md$|\.ja\.md$' || true)
-            else
-              DELETED_FILES=$(git diff --name-only --diff-filter=D ${{ github.event.before }} ${{ github.event.after }} | grep -E '\.md$|\.en\.md$|\.ja\.md$' || true)
-            fi
-            DELETED_FILES=$(echo "$DELETED_FILES" | tr '\n' ',' | sed 's/,$//')
-            
-            echo "Deleted files: $DELETED_FILES"
-            
-            if [[ -n "$CHANGED_FILES" ]] || [[ -n "$DELETED_FILES" ]]; then
-              echo "has_changes=true" >> $GITHUB_OUTPUT
-            else
-              echo "has_changes=false" >> $GITHUB_OUTPUT
-            fi
-            
-            echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
-            echo "deleted_files=$DELETED_FILES" >> $GITHUB_OUTPUT
-            echo "is_initial_setup=false" >> $GITHUB_OUTPUT
-          fi
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "deleted_files=$DELETED_FILES" >> $GITHUB_OUTPUT
+          echo "is_initial_setup=false" >> $GITHUB_OUTPUT
 
   trigger-markdown-translation:
     needs: check-markdown-changes
     if: needs.check-markdown-changes.outputs.has_changes == 'true' && needs.check-markdown-changes.outputs.skip_translation == 'false'
-    uses: hrxsrv/bilingual-github/.github/workflows/translate-markdown.yml@main
+    uses: rimoapp/bilingual-github/.github/workflows/translate-markdown.yml@main
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RIMO_GITHUB_APP_ID: ${{ secrets.RIMO_GITHUB_APP_ID }}
+      RIMO_GITHUB_APP_PRIVATE_KEY: ${{ secrets.RIMO_GITHUB_APP_PRIVATE_KEY }}
     with:
       is_initial_setup: ${{ needs.check-markdown-changes.outputs.is_initial_setup == 'true' }}
       changed_files: ${{ needs.check-markdown-changes.outputs.changed_files }}
       deleted_files: ${{ needs.check-markdown-changes.outputs.deleted_files }}
-      commit_hash: ${{ github.sha }}
       is_pr: ${{ needs.check-markdown-changes.outputs.is_pr == 'true' }}
       pr_number: ${{ needs.check-markdown-changes.outputs.pr_number }}
       target_branch: ${{ needs.check-markdown-changes.outputs.target_branch }}  
