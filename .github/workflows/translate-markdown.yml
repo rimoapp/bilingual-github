@@ -78,12 +78,14 @@ jobs:
           repository: rimoapp/bilingual-github
           path: bilingual-github
           token: ${{ steps.generate_token.outputs.token }}
+          persist-credentials: false
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
           path: target-repo
           fetch-depth: 0
-          token: ${{ github.token }}
+          token: ${{ steps.generate_token.outputs.token || github.token }}
+          persist-credentials: false
 
       - name: Set Up Python
         uses: actions/setup-python@v4
