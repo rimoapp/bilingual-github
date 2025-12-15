@@ -47,7 +47,7 @@ permissions:
 
 jobs:
   translate-markdown:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith
 
     steps:
       - name: Check if Rimo GitHub App credentials exist
