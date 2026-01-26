@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 import requests
 
@@ -7,6 +8,77 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set. Please ensure it is defined in the environment.")
+
+
+def _detect_language_unicode(text):
+    """
+    Fallback language detection using Unicode character ranges.
+    Returns 'ja' if Japanese characters are found, 'en' otherwise.
+    """
+    HIRAGANA = '\u3040-\u309F'
+    KATAKANA = '\u30A0-\u30FF'
+    KANJI = '\u4E00-\u9FFF'
+    HALF_WIDTH_KATAKANA = '\uFF60-\uFF9F'
+
+    jp_pattern = f'[{HIRAGANA}{KATAKANA}{KANJI}{HALF_WIDTH_KATAKANA}]'
+    has_japanese = bool(re.search(jp_pattern, text))
+
+    return "ja" if has_japanese else "en"
+
+
+def detect_language(text):
+    """
+    Detect language using LLM. Returns 'ja' for Japanese, 'en' for English.
+    Falls back to Unicode detection if API fails.
+    """
+    if not text or not text.strip():
+        return "en"
+
+    try:
+        url = "https://api.openai.com/v1/chat/completions"
+
+        # Limit text to first 500 chars to reduce cost
+        sample_text = text[:500] if len(text) > 500 else text
+
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a language detector. Analyze the text and respond with ONLY 'ja' if the text is primarily Japanese, or 'en' if it's primarily English or any other language. Output only the 2-letter language code, nothing else."
+                },
+                {
+                    "role": "user",
+                    "content": sample_text
+                }
+            ],
+            "temperature": 0,
+            "max_tokens": 5
+        }
+
+        headers = {
+            "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '').strip()}"
+        }
+
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+
+        if response.status_code == 200:
+            result = response.json()
+            detected = result["choices"][0]["message"]["content"].strip().lower()
+
+            # Validate response is one of expected values
+            if detected in ["ja", "en"]:
+                return detected
+            else:
+                print(f"Unexpected language detection response: {detected}, falling back to Unicode detection")
+                return _detect_language_unicode(text)
+        else:
+            print(f"Language detection API failed with status {response.status_code}, falling back to Unicode detection")
+            return _detect_language_unicode(text)
+
+    except Exception as e:
+        print(f"Error in language detection: {e}, falling back to Unicode detection")
+        return _detect_language_unicode(text)
 
 def translate_text(text, target_language):
     try:
