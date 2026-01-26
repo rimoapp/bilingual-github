@@ -11,7 +11,7 @@ script_dir = os.path.dirname(__file__)
 src_dir = os.path.abspath(os.path.join(script_dir, '..', '..', 'src'))
 sys.path.insert(0, src_dir)
  
-from utils.translation import translate_text, translate_incremental
+from utils.translation import translate_text, translate_incremental, detect_language
 
 TARGET_LANGUAGES = ["en", "ja"]
 TRANSLATION_IGNORE_FILE = ".md_ignore"
@@ -164,18 +164,6 @@ def calculate_diff_percentage(file_path, current_commit_hash):
     except Exception as e:
         print(f"Error calculating diff: {e}")
         return None, None, None, None
-
-def detect_language(content):
-    """Simple language detection based on character patterns"""
-    # Count Japanese characters (Hiragana, Katakana, Kanji)
-    japanese_chars = len(re.findall(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]', content))
-    total_chars = len(re.sub(r'\s', '', content))
-    
-    if total_chars == 0:
-        return "en"  # Default to English for empty files
-    
-    japanese_ratio = japanese_chars / total_chars
-    return "ja" if japanese_ratio > 0.1 else "en"
 
 def get_file_language(file_path):
     """Determine language based on file extension convention"""
