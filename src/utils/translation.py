@@ -32,20 +32,41 @@ def detect_language(text):
     Falls back to Unicode detection if API fails.
     """
     if not text or not text.strip():
+        print("[Language Detection] Empty text, defaulting to 'en'")
         return "en"
+
+    # Limit text to first 500 chars to reduce cost
+    sample_text = text[:500] if len(text) > 500 else text
+    print(f"[Language Detection] Analyzing text ({len(sample_text)} chars): '{sample_text[:100]}...'")
 
     try:
         url = "https://api.openai.com/v1/chat/completions"
 
-        # Limit text to first 500 chars to reduce cost
-        sample_text = text[:500] if len(text) > 500 else text
+        system_prompt = """You are a language detector. Your task is to identify the PRIMARY language of the text.
+
+Rules:
+1. Determine which language the author INTENDED to write in based on sentence structure and grammar
+2. If the text is written in English grammar/structure with a few foreign words mixed in, return 'en'
+3. If the text is written in Japanese grammar/structure with a few English words mixed in, return 'ja'
+4. For truly mixed content, identify which language dominates (>50% of meaningful content)
+5. For any other language (Chinese, Korean, French, etc.), return 'en'
+
+Examples:
+- "I am finding 間違い in the logic" → 'en' (English sentence with one Japanese word)
+- "Let's meet at 東京駅 tomorrow" → 'en' (English sentence with Japanese location)
+- "今日はgood dayですね" → 'ja' (Japanese sentence with English words)
+- "このcodeをreviewしてください" → 'ja' (Japanese sentence structure)
+- "Hello world" → 'en'
+- "こんにちは" → 'ja'
+
+Respond with ONLY 'ja' or 'en'. Nothing else."""
 
         payload = {
             "model": "gpt-4o-mini",
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a language detector. Analyze the text and respond with ONLY 'ja' if the text is primarily Japanese, or 'en' if it's primarily English or any other language. Output only the 2-letter language code, nothing else."
+                    "content": system_prompt
                 },
                 {
                     "role": "user",
@@ -65,20 +86,30 @@ def detect_language(text):
         if response.status_code == 200:
             result = response.json()
             detected = result["choices"][0]["message"]["content"].strip().lower()
+            print(f"[Language Detection] LLM response: '{detected}'")
 
             # Validate response is one of expected values
             if detected in ["ja", "en"]:
+                print(f"[Language Detection] Result: '{detected}'")
                 return detected
             else:
-                print(f"Unexpected language detection response: {detected}, falling back to Unicode detection")
-                return _detect_language_unicode(text)
+                print(f"[Language Detection] Unexpected response: '{detected}', falling back to Unicode detection")
+                fallback_result = _detect_language_unicode(text)
+                print(f"[Language Detection] Unicode fallback result: '{fallback_result}'")
+                return fallback_result
         else:
-            print(f"Language detection API failed with status {response.status_code}, falling back to Unicode detection")
-            return _detect_language_unicode(text)
+            print(f"[Language Detection] API failed with status {response.status_code}: {response.text}")
+            print("[Language Detection] Falling back to Unicode detection")
+            fallback_result = _detect_language_unicode(text)
+            print(f"[Language Detection] Unicode fallback result: '{fallback_result}'")
+            return fallback_result
 
     except Exception as e:
-        print(f"Error in language detection: {e}, falling back to Unicode detection")
-        return _detect_language_unicode(text)
+        print(f"[Language Detection] Error: {e}")
+        print("[Language Detection] Falling back to Unicode detection")
+        fallback_result = _detect_language_unicode(text)
+        print(f"[Language Detection] Unicode fallback result: '{fallback_result}'")
+        return fallback_result
 
 def translate_text(text, target_language):
     try:
