@@ -90,29 +90,53 @@ def translate_comment(comment):
     return False
 
 def main():
-    if not all([GITHUB_TOKEN, REPO_NAME, ISSUE_NUMBER, COMMENT_ID]):
-        print("Missing required environment variables")
+    # COMMENT_ID is optional - if not provided, translate all comments on the issue
+    if not all([GITHUB_TOKEN, REPO_NAME, ISSUE_NUMBER]):
+        print("Missing required environment variables (GITHUB_TOKEN, REPO_NAME, or ISSUE_NUMBER)")
         return
-    
+
     try:
         issue_number = int(ISSUE_NUMBER)
-        comment_id = int(COMMENT_ID)
-        
+
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(REPO_NAME)
         issue = repo.get_issue(number=issue_number)
-        
+
         if not should_translate_issue(issue):
             print(f"Issue #{issue_number} does not have the '{NEEDS_TRANSLATION_LABEL}' label. Skipping comment translation.")
             return
-            
-        comment = issue.get_comment(comment_id)
-        
-        if translate_comment(comment):
+
+        comments_translated = False
+
+        if COMMENT_ID:
+            # Translate a specific comment (triggered by issue_comment event)
+            comment_id = int(COMMENT_ID)
+            print(f"Translating single comment #{comment_id} on issue #{issue_number}")
+            comment = issue.get_comment(comment_id)
+            if translate_comment(comment):
+                comments_translated = True
+                print(f"Successfully translated comment #{comment_id}")
+        else:
+            # Translate all comments on the issue (triggered by label event)
+            print(f"Translating all comments on issue #{issue_number}")
+            comments = issue.get_comments()
+            comment_count = 0
+            for comment in comments:
+                comment_count += 1
+                print(f"Processing comment #{comment.id} ({comment_count})...")
+                if translate_comment(comment):
+                    comments_translated = True
+                    print(f"Successfully translated comment #{comment.id}")
+                else:
+                    print(f"Comment #{comment.id} was already translated or empty")
+            print(f"Processed {comment_count} comments on issue #{issue_number}")
+
+        if comments_translated:
             labels = [label.name for label in issue.labels]
             if TRANSLATED_LABEL not in labels:
                 issue.add_to_labels(TRANSLATED_LABEL)
-    
+                print(f"Added '{TRANSLATED_LABEL}' label to issue #{issue_number}")
+
     except ValueError as ve:
         print(f"Invalid number format: {ve}")
         return
