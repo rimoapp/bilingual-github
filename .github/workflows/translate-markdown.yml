@@ -151,7 +151,7 @@ jobs:
             echo "No changes to commit"
           else
             if [ "${{ inputs.is_pr }}" = "true" ]; then
-              git commit -m "Update markdown translations [skip-translation]"
+              git commit -m "Update markdown translations"
               
               # Pull with rebase to handle any new commits, then push
               echo "Pulling latest changes before push..."
@@ -164,7 +164,7 @@ jobs:
               echo "Pushing translations..."
               git push origin ${{ inputs.target_branch }}
             else
-              git commit -m "Update markdown translations [skip-translation]"
+              git commit -m "Update markdown translations"
               git pull --rebase origin HEAD || {
                 git rebase --abort
                 git pull origin HEAD
