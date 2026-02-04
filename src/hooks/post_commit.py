@@ -270,11 +270,11 @@ def was_edited_by_bot(file_path):
         return False
 
 def check_simultaneous_edits(changed_files):
-    """Check if both language pairs were edited by HUMANS in the same changeset.
+    """Check if both language pairs were edited in the same changeset.
 
-    If one of the pair was edited by the translation bot, we should still
-    proceed with translation (this is the normal flow after bot commits).
-    Only skip if both files were edited by humans.
+    - If one file was edited by bot and one by human: skip the bot-edited file,
+      process only the human-edited file (to avoid circular translation).
+    - If both were edited by humans: skip both (can't determine which is source).
     """
     files_set = set(changed_files)
     skip_files = set()
@@ -289,13 +289,27 @@ def check_simultaneous_edits(changed_files):
         if path.name == "README.md":
             readme_ja = path.parent / "README.ja.md"
             if str(readme_ja) in files_set:
-                # Check if either was edited by bot
-                if was_edited_by_bot(file_path) or was_edited_by_bot(str(readme_ja)):
-                    print(f"Pair {file_path} <-> {readme_ja}: one was edited by bot, proceeding with translation")
-                    continue
-                print(f"Simultaneous human edit detected: {file_path} and {readme_ja}")
-                skip_files.add(file_path)
-                skip_files.add(str(readme_ja))
+                file_by_bot = was_edited_by_bot(file_path)
+                pair_by_bot = was_edited_by_bot(str(readme_ja))
+
+                if file_by_bot and not pair_by_bot:
+                    # This file was edited by bot, skip it, process the pair
+                    print(f"Skipping {file_path} (edited by bot), will translate from {readme_ja}")
+                    skip_files.add(file_path)
+                elif pair_by_bot and not file_by_bot:
+                    # Pair was edited by bot, skip it, process this file
+                    print(f"Skipping {readme_ja} (edited by bot), will translate from {file_path}")
+                    skip_files.add(str(readme_ja))
+                elif not file_by_bot and not pair_by_bot:
+                    # Both edited by humans, skip both
+                    print(f"Simultaneous human edit detected: {file_path} and {readme_ja}, skipping both")
+                    skip_files.add(file_path)
+                    skip_files.add(str(readme_ja))
+                # If both by bot, skip both (shouldn't happen normally)
+                else:
+                    print(f"Both {file_path} and {readme_ja} edited by bot, skipping both")
+                    skip_files.add(file_path)
+                    skip_files.add(str(readme_ja))
             continue
 
         # Check for paired files
@@ -309,13 +323,27 @@ def check_simultaneous_edits(changed_files):
             continue
 
         if str(pair_path) in files_set:
-            # Check if either was edited by bot
-            if was_edited_by_bot(file_path) or was_edited_by_bot(str(pair_path)):
-                print(f"Pair {file_path} <-> {pair_path}: one was edited by bot, proceeding with translation")
-                continue
-            print(f"Simultaneous human edit detected: {file_path} and {pair_path}")
-            skip_files.add(file_path)
-            skip_files.add(str(pair_path))
+            file_by_bot = was_edited_by_bot(file_path)
+            pair_by_bot = was_edited_by_bot(str(pair_path))
+
+            if file_by_bot and not pair_by_bot:
+                # This file was edited by bot, skip it, process the pair
+                print(f"Skipping {file_path} (edited by bot), will translate from {pair_path}")
+                skip_files.add(file_path)
+            elif pair_by_bot and not file_by_bot:
+                # Pair was edited by bot, skip it, process this file
+                print(f"Skipping {pair_path} (edited by bot), will translate from {file_path}")
+                skip_files.add(str(pair_path))
+            elif not file_by_bot and not pair_by_bot:
+                # Both edited by humans, skip both
+                print(f"Simultaneous human edit detected: {file_path} and {pair_path}, skipping both")
+                skip_files.add(file_path)
+                skip_files.add(str(pair_path))
+            # If both by bot, skip both (shouldn't happen normally)
+            else:
+                print(f"Both {file_path} and {pair_path} edited by bot, skipping both")
+                skip_files.add(file_path)
+                skip_files.add(str(pair_path))
 
     return skip_files
 
