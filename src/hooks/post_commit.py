@@ -248,26 +248,56 @@ def rename_ambiguous_md_file(file_path):
     
     return file_path
 
+BOT_AUTHORS = ['rimo-translation-bot[bot]', 'github-actions[bot]']
+
+def was_edited_by_bot(file_path):
+    """Check if the last commit to a file was made by the translation bot"""
+    try:
+        result = subprocess.run(
+            ['git', 'log', '-1', '--pretty=%an', '--', str(file_path)],
+            capture_output=True,
+            text=True,
+            encoding='utf-8'
+        )
+        if result.returncode == 0:
+            last_author = result.stdout.strip()
+            is_bot = last_author in BOT_AUTHORS
+            print(f"  Last author of {file_path}: '{last_author}' (bot: {is_bot})")
+            return is_bot
+        return False
+    except Exception as e:
+        print(f"  Error checking author for {file_path}: {e}")
+        return False
+
 def check_simultaneous_edits(changed_files):
-    """Check if both language pairs were edited in the same changeset"""
+    """Check if both language pairs were edited by HUMANS in the same changeset.
+
+    If one of the pair was edited by the translation bot, we should still
+    proceed with translation (this is the normal flow after bot commits).
+    Only skip if both files were edited by humans.
+    """
     files_set = set(changed_files)
     skip_files = set()
-    
+
     for file_path in changed_files:
         if file_path in skip_files:
             continue
-            
+
         path = Path(file_path)
-        
+
         # Special case for README.md
         if path.name == "README.md":
             readme_ja = path.parent / "README.ja.md"
             if str(readme_ja) in files_set:
-                print(f"Simultaneous edit detected: {file_path} and {readme_ja}")
+                # Check if either was edited by bot
+                if was_edited_by_bot(file_path) or was_edited_by_bot(str(readme_ja)):
+                    print(f"Pair {file_path} <-> {readme_ja}: one was edited by bot, proceeding with translation")
+                    continue
+                print(f"Simultaneous human edit detected: {file_path} and {readme_ja}")
                 skip_files.add(file_path)
                 skip_files.add(str(readme_ja))
             continue
-        
+
         # Check for paired files
         if path.name.endswith('.en.md'):
             stem = path.name[:-6]  # Remove .en.md
@@ -277,12 +307,16 @@ def check_simultaneous_edits(changed_files):
             pair_path = path.parent / f"{stem}.en.md"
         else:
             continue
-            
+
         if str(pair_path) in files_set:
-            print(f"Simultaneous edit detected: {file_path} and {pair_path}")
+            # Check if either was edited by bot
+            if was_edited_by_bot(file_path) or was_edited_by_bot(str(pair_path)):
+                print(f"Pair {file_path} <-> {pair_path}: one was edited by bot, proceeding with translation")
+                continue
+            print(f"Simultaneous human edit detected: {file_path} and {pair_path}")
             skip_files.add(file_path)
             skip_files.add(str(pair_path))
-    
+
     return skip_files
 
 
