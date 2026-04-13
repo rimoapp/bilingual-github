@@ -13,7 +13,9 @@ if not OPENAI_API_KEY:
 def _detect_language_unicode(text):
     """
     Fallback language detection using Unicode character ranges.
-    Returns 'ja' if Japanese characters are found, 'en' otherwise.
+    Returns 'ja' if Japanese characters make up at least 10% of the
+    alphabetic/CJK content, 'en' otherwise.
+    A single Japanese word in an English sentence will not flip detection.
     """
     HIRAGANA = '\u3040-\u309F'
     KATAKANA = '\u30A0-\u30FF'
@@ -21,9 +23,44 @@ def _detect_language_unicode(text):
     HALF_WIDTH_KATAKANA = '\uFF60-\uFF9F'
 
     jp_pattern = f'[{HIRAGANA}{KATAKANA}{KANJI}{HALF_WIDTH_KATAKANA}]'
-    has_japanese = bool(re.search(jp_pattern, text))
+    latin_pattern = r'[A-Za-z]'
 
-    return "ja" if has_japanese else "en"
+    jp_chars = len(re.findall(jp_pattern, text))
+    latin_chars = len(re.findall(latin_pattern, text))
+    total = jp_chars + latin_chars
+
+    if total == 0:
+        return "en"
+
+    return "ja" if (jp_chars / total) >= 0.1 else "en"
+
+
+def _preprocess_for_detection(text):
+    """
+    Remove noise from a GitHub comment before language detection:
+    - Blockquotes (lines starting with >) — these are quoted text from other
+      people, not the author's own language
+    - Fenced code blocks (``` ... ```)
+    - Inline code (` ... `)
+    - URLs
+
+    Falls back to the original text if stripping leaves too little content.
+    """
+    # Remove fenced code blocks
+    cleaned = re.sub(r'```[\s\S]*?```', '', text)
+    # Remove inline code
+    cleaned = re.sub(r'`[^`]*`', '', cleaned)
+    # Remove URLs
+    cleaned = re.sub(r'https?://\S+', '', cleaned)
+    # Remove blockquote lines (lines starting with optional whitespace then >)
+    cleaned = re.sub(r'(?m)^[ \t]*>.*$', '', cleaned)
+    # Collapse blank lines
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+
+    # If stripping removed almost everything, fall back to original
+    if len(cleaned) < 20:
+        return text.strip()
+    return cleaned
 
 
 def detect_language(text):
@@ -35,8 +72,13 @@ def detect_language(text):
         print("[Language Detection] Empty text, defaulting to 'en'")
         return "en"
 
+    # Strip blockquotes, code blocks, and URLs before detection so that
+    # quoted Japanese text in an English reply doesn't skew the result.
+    preprocessed = _preprocess_for_detection(text)
+    print(f"[Language Detection] Preprocessed text ({len(preprocessed)} chars): '{preprocessed[:100]}...'")
+
     # Limit text to first 500 chars to reduce cost
-    sample_text = text[:500] if len(text) > 500 else text
+    sample_text = preprocessed[:500] if len(preprocessed) > 500 else preprocessed
     print(f"[Language Detection] Analyzing text ({len(sample_text)} chars): '{sample_text[:100]}...'")
 
     try:
@@ -94,20 +136,20 @@ Respond with ONLY 'ja' or 'en'. Nothing else."""
                 return detected
             else:
                 print(f"[Language Detection] Unexpected response: '{detected}', falling back to Unicode detection")
-                fallback_result = _detect_language_unicode(text)
+                fallback_result = _detect_language_unicode(preprocessed)
                 print(f"[Language Detection] Unicode fallback result: '{fallback_result}'")
                 return fallback_result
         else:
             print(f"[Language Detection] API failed with status {response.status_code}: {response.text}")
             print("[Language Detection] Falling back to Unicode detection")
-            fallback_result = _detect_language_unicode(text)
+            fallback_result = _detect_language_unicode(preprocessed)
             print(f"[Language Detection] Unicode fallback result: '{fallback_result}'")
             return fallback_result
 
     except Exception as e:
         print(f"[Language Detection] Error: {e}")
         print("[Language Detection] Falling back to Unicode detection")
-        fallback_result = _detect_language_unicode(text)
+        fallback_result = _detect_language_unicode(preprocessed)
         print(f"[Language Detection] Unicode fallback result: '{fallback_result}'")
         return fallback_result
 
