@@ -103,8 +103,12 @@ Examples:
 
 Respond with ONLY 'ja' or 'en'. Nothing else."""
 
+        # GPT-5.x rejects `max_tokens` (use `max_completion_tokens`) and
+        # non-default `temperature`. The cap leaves headroom beyond the
+        # 'ja'/'en' answer in case the model spends completion tokens on
+        # reasoning before the visible output.
         payload = {
-            "model": "gpt-4o-mini",
+            "model": "gpt-5.6-luna",
             "messages": [
                 {
                     "role": "system",
@@ -115,8 +119,7 @@ Respond with ONLY 'ja' or 'en'. Nothing else."""
                     "content": sample_text
                 }
             ],
-            "temperature": 0,
-            "max_tokens": 5
+            "max_completion_tokens": 16
         }
 
         headers = {
@@ -198,13 +201,13 @@ def translate_text(text, target_language):
         if glossary:
             system_prompt += "\n" + glossary
 
+        # GPT-5.x rejects non-default `temperature`, so none is set.
         payload = {
-            "model": "gpt-4o-mini",
+            "model": "gpt-5.6-luna",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
-            ],
-            "temperature": 0
+            ]
         }
 
         headers = {
@@ -282,17 +285,17 @@ Updated translation:"""
         if glossary:
             system_content += " " + glossary
 
+        # GPT-5.x rejects non-default `temperature`, so none is set.
         payload = {
-            "model": "gpt-4",
+            "model": "gpt-5.6-luna",
             "messages": [
                 {"role": "system", "content": system_content},
                 {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.1
+            ]
         }
-        
+
         print(f"\n[DEBUG] Sending request to OpenAI API:")
-        print(f"  - model: gpt-4")
+        print(f"  - model: {payload['model']}")
         print(f"  - prompt length: {len(prompt)} chars")
         print(f"  - system message: 'You are a precise translator. Translate only the changed portions to {target_lang}.'")
         print(f"  - Prompt preview (first 200 chars): {prompt[:200]}...")
